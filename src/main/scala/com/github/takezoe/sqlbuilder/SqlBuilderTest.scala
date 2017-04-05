@@ -9,11 +9,16 @@ object SqlBuilderTest extends App {
     .sortBy { case u ~ c1 ~ c2 => u.userId asc }
     .map    { case u ~ c1 ~ c2 => u.userName ~ c1.companyName}
 
-  println(query.sql)
+  query.toSql() match {
+    case (sql, params) => {
+      println(sql)
+      println(params.map(_.value))
+    }
+  }
 
 }
 
-class Users(val alias: String) extends TableDefinition {
+class Users(val alias: String) extends TableDef {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
@@ -25,7 +30,7 @@ object Users {
   def apply(alias: String) = new Query[Users, Users](new Users(alias), new Users(alias))
 }
 
-class Companies(val alias: String) extends TableDefinition {
+class Companies(val alias: String) extends TableDef {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")

@@ -20,7 +20,7 @@ publishTo := {
     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
 }
 
-scalacOptions := Seq("-deprecation")
+scalacOptions := Seq("-deprecation", "-feature")
 
 //unmanagedClasspath in Compile += baseDirectory.value / "src" / "main" / "resources"
 

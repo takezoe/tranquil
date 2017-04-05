@@ -1,6 +1,8 @@
 package com.github.takezoe.sqlbuilder
 
-class Query[B <: TableDefinition, T](
+import scala.collection.mutable.ListBuffer
+
+class Query[B <: TableDef, T](
   private val base: B,
   private val definitions: T,
   private val filters: Seq[Condition] = Nil,
@@ -8,15 +10,15 @@ class Query[B <: TableDefinition, T](
   private val innerJoins: Seq[(Query[_, _], Condition)] = Nil,
   private val leftJoins: Seq[(Query[_, _], Condition)] = Nil,
   private val columns: Seq[Column[_]] = Nil
-) extends Sqlizable {
+) {
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty
   }
 
-  private def getBase: TableDefinition = base
+  private def getBase: TableDef = base
 
-  def innerJoin[J <: TableDefinition](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
+  def innerJoin[J <: TableDef](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
     new Query[B, (T, J)](
       base        = base,
       definitions = (definitions, table.base),
@@ -28,7 +30,7 @@ class Query[B <: TableDefinition, T](
     )
   }
 
-  def leftJoin[J <: TableDefinition](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
+  def leftJoin[J <: TableDef](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
     new Query[B, (T, J)](
       base        = base,
       definitions = (definitions, table.base),
@@ -76,8 +78,9 @@ class Query[B <: TableDefinition, T](
     )
   }
 
-  lazy val sql: String = {
+  def toSql(bindParams: ListBuffer[Param[_]] = ListBuffer.empty): (String, Seq[Param[_]]) = {
     val sb = new StringBuilder()
+    val bindParams = new ListBuffer[Param[_]]
     sb.append("SELECT ")
 
     if(columns.nonEmpty){
@@ -102,13 +105,14 @@ class Query[B <: TableDefinition, T](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.sql)
+        sb.append(query.toSql(bindParams))
         sb.append(")")
       }
       sb.append(" ")
       sb.append(query.getBase.alias)
       sb.append(" ON ")
       sb.append(condition.sql)
+      bindParams ++= condition.parameters
     }
 
     leftJoins.foreach { case (query, condition) =>
@@ -117,7 +121,7 @@ class Query[B <: TableDefinition, T](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.sql)
+        sb.append(query.toSql(bindParams))
         sb.append(")")
       }
       sb.append(" ")
@@ -129,11 +133,13 @@ class Query[B <: TableDefinition, T](
     if(filters.nonEmpty){
       sb.append(" WHERE ")
       sb.append(filters.map(_.sql).mkString(" AND "))
+      bindParams ++= filters.flatMap(_.parameters)
     }
     if(sorts.nonEmpty){
       sb.append(" ORDER BY ")
       sb.append(sorts.map(_.sql).mkString(", "))
     }
-    sb.toString()
+
+    (sb.toString(), bindParams.toSeq)
   }
 }

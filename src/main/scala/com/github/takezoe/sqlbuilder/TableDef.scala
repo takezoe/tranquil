@@ -1,6 +1,6 @@
 package com.github.takezoe.sqlbuilder
 
-trait TableDefinition {
+trait TableDef {
   val tableName: String
   val columns: Seq[Column[_]]
   val alias: String

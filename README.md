@@ -40,3 +40,12 @@ val query = Users("u")
 
 println(query.sql)
 ```
+
+Generated SQL is:
+
+```sql
+SELECT u.USER_NAME, c.COMPANY_NAME 
+FROM USERS u INNER JOIN COMPANIES c ON u.COMPANY_ID == c.COMPANY_ID
+WHERE (u.USER_ID == 'takezoe' OR u.USER_ID == 'takezoen') 
+ORDER BY u.USER_ID ASC
+```

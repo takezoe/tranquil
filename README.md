@@ -33,11 +33,10 @@ Then you can assemble SQL using type-safe DSL.
 
 ```scala
 val query = Users("u")
-  .innerJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
-  .innerJoin(Companies("c2")){ case u ~ c1 ~ c2 => u.companyId == c2.companyId }
-  .filter { case u ~ c1 ~ c2 => (u.userId == "123") || (u.userId == "456") }
-  .sortBy { case u ~ c1 ~ c2 => u.userId asc }
-  .map    { case u ~ c1 ~ c2 => u.userName ~ c1.companyName}
+  .innerJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
+  .filter { case u ~ c => (u.userId == "takezoe") || (u.userId == "takezoen") }
+  .sortBy { case u ~ c => u.userId asc }
+  .map    { case u ~ c => u.userName ~ c.companyName}
 
 println(query.sql)
 ```

@@ -14,6 +14,8 @@ class Query[B <: TableDefinition, T](
     wheres.isEmpty && orderBys.isEmpty && innerJoins.isEmpty
   }
 
+  private def getBase: TableDefinition = base
+
   def innerJoin[J <: TableDefinition](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
     new Query[B, (T, J)](
       base  = this.base,
@@ -97,14 +99,14 @@ class Query[B <: TableDefinition, T](
     innerJoins.foreach { case (query, condition) =>
       sb.append(" INNER JOIN ")
       if(isTableQuery){
-        sb.append(query.base.asInstanceOf[TableDefinition].tableName)
+        sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
         sb.append(query.sql)
         sb.append(")")
       }
       sb.append(" ")
-      sb.append(query.base.asInstanceOf[TableDefinition].alias)
+      sb.append(query.getBase.alias)
       sb.append(" ON ")
       sb.append(condition.sql)
     }
@@ -112,14 +114,14 @@ class Query[B <: TableDefinition, T](
     leftJoins.foreach { case (query, condition) =>
       sb.append(" LEFT JOIN ")
       if(isTableQuery){
-        sb.append(query.base.asInstanceOf[TableDefinition].tableName)
+        sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
         sb.append(query.sql)
         sb.append(")")
       }
       sb.append(" ")
-      sb.append(query.base.asInstanceOf[TableDefinition].alias)
+      sb.append(query.getBase.alias)
       sb.append(" ON ")
       sb.append(condition.sql)
     }

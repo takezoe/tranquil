@@ -64,18 +64,6 @@ class Query[B <: TableDefinition, T](
     )
   }
 
-//  def map(mapper: T => Column[_]): Query[B, T] = {
-//    new Query[B, T](
-//      base        = base,
-//      definitions = definitions,
-//      filters     = filters,
-//      sorts       = sorts,
-//      innerJoins  = innerJoins,
-//      leftJoins   = leftJoins,
-//      columns     = Seq(mapper(definitions))
-//    )
-//  }
-
   def map(mapper: T => Columns): Query[B, T] = {
     new Query[B, T](
       base        = base,

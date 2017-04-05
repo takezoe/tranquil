@@ -78,9 +78,8 @@ class Query[B <: TableDef, T](
     )
   }
 
-  def toSql(bindParams: ListBuffer[Param[_]] = ListBuffer.empty): (String, Seq[Param[_]]) = {
+  def toSql(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
-    val bindParams = new ListBuffer[Param[_]]
     sb.append("SELECT ")
 
     if(columns.nonEmpty){
@@ -105,7 +104,7 @@ class Query[B <: TableDef, T](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.toSql(bindParams))
+        sb.append(query.toSql(bindParams)._1)
         sb.append(")")
       }
       sb.append(" ")
@@ -140,6 +139,6 @@ class Query[B <: TableDef, T](
       sb.append(sorts.map(_.sql).mkString(", "))
     }
 
-    (sb.toString(), bindParams.toSeq)
+    (sb.toString(), bindParams)
   }
 }

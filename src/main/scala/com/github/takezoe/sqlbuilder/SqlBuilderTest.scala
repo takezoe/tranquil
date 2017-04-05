@@ -3,11 +3,11 @@ package com.github.takezoe.sqlbuilder
 object SqlBuilderTest extends App {
 
   val query = Users("u")
-    .innerJoin(Companies("c1")){ case (u, c) => u.companyId == c.companyId }
-    .innerJoin(Companies("c2")){ case ((u, _), c2) => u.companyId == c2.companyId }
-    .filter { case ((u, c1), c2) => (u.userId == "123") || (u.userId == "456") }
-    .sortBy { case ((u, c1), c2) => u.userId asc }
-    .map    { case ((u, c1), c2) => Seq(u.userName, c1.companyName) }
+    .innerJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
+    .innerJoin(Companies("c2")){ case u ~ c1 ~ c2 => u.companyId == c2.companyId }
+    .filter { case u ~ c1 ~ c2 => (u.userId == "123") || (u.userId == "456") }
+    .sortBy { case u ~ c1 ~ c2 => u.userId asc }
+    .map    { case u ~ c1 ~ c2 => u.userName ~ c1.companyName}
 
   println(query.sql)
 

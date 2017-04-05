@@ -30,4 +30,12 @@ class Column[T](val alias: String, val columnName: String){
     Sort(s"${alias}.${columnName} DESC")
   }
 
+  def ~(column: Column[_]): Columns = Columns(Seq(this, column))
+
+}
+
+case class Columns(columns: Seq[Column[_]]){
+
+  def ~(column: Column[_]): Columns = Columns(columns :+ column)
+
 }

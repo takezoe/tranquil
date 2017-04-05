@@ -22,12 +22,12 @@ class Column[T](val alias: String, val columnName: String){
     Condition(s"${alias}.${columnName} IS NULL")
   }
 
-  def asc: OrderBy = {
-    OrderBy(s"${alias}.${columnName} ASC")
+  def asc: Sort = {
+    Sort(s"${alias}.${columnName} ASC")
   }
 
-  def desc: OrderBy = {
-    OrderBy(s"${alias}.${columnName} DESC")
+  def desc: Sort = {
+    Sort(s"${alias}.${columnName} DESC")
   }
 
 }

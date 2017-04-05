@@ -11,7 +11,7 @@ class Query[B <: TableDefinition, T](
 ) extends Sqlizable {
 
   private def isTableQuery: Boolean = {
-    filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty
+    filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
   }
 
   private def getBase: TableDefinition = base
@@ -98,7 +98,7 @@ class Query[B <: TableDefinition, T](
 
     innerJoins.foreach { case (query, condition) =>
       sb.append(" INNER JOIN ")
-      if(isTableQuery){
+      if(query.isTableQuery){
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
@@ -113,7 +113,7 @@ class Query[B <: TableDefinition, T](
 
     leftJoins.foreach { case (query, condition) =>
       sb.append(" LEFT JOIN ")
-      if(isTableQuery){
+      if(query.isTableQuery){
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")

@@ -10,9 +10,9 @@ object SqlBuilderTest extends App {
     .map    { case u ~ c1 ~ c2 => u.userName ~ c1.companyName}
 
   query.toSql() match {
-    case (sql, params) => {
+    case (sql, bindParams) => {
       println(sql)
-      println(params.map(_.value))
+      println(bindParams.params.map(_.value))
     }
   }
 

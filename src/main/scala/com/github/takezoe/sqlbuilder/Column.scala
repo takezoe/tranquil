@@ -5,22 +5,27 @@ import java.sql.ResultSet
 class Column[T](val alias: String, val columnName: String)(implicit val binder: Binder[T]){
 
   val fullName = s"${alias}.${columnName}"
+  val asName   = s"${alias}_${columnName}"
 
   def get(rs: ResultSet): T = {
-    binder.get(fullName, rs)
+    binder.get(asName, rs)
   }
 
   def getOpt(rs: ResultSet): Option[T] = {
-    Option(binder.get(fullName, rs))
+    if(rs.getObject(asName) == null){
+      None
+    } else {
+      Some(binder.get(asName, rs))
+    }
   }
 
 
   def ==(column: Column[T]): Condition = {
-    Condition(s"${fullName} == ${column.fullName}")
+    Condition(s"${fullName} = ${column.fullName}")
   }
 
   def ==(value: T)(implicit binder: Binder[T]): Condition = {
-    Condition(s"${fullName} == ?", Seq(Param(value, binder)))
+    Condition(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
   def !=(column: Column[T]): Condition = {

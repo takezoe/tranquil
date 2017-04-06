@@ -2,6 +2,8 @@ package com.github.takezoe.sqlbuilder
 
 import java.sql.{Connection, PreparedStatement, ResultSet}
 
+import scala.collection.mutable.ListBuffer
+
 class Query[B <: TableDef[_], T, R](
   private val base: B,
   private val definitions: T,
@@ -34,7 +36,7 @@ class Query[B <: TableDef[_], T, R](
     new Query[B, (T, J), (R, Option[K])](
       base        = base,
       definitions = (definitions, table.base),
-      mapper      = (rs: ResultSet) => (mapper(rs), if(table.base.columns.head.get(rs) == null) None else Some(table.base.toModel(rs))),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(table.base.columns.head.asName) == null) None else Some(table.base.toModel(rs))),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -70,11 +72,9 @@ class Query[B <: TableDef[_], T, R](
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
-    sb.append(base.columns.map(_.fullName).mkString(", "))
-
-    val columns = base.columns.map(_.fullName) ++
-      innerJoins.flatMap { case (query, _) => query.getBase.columns.map(_.fullName) } ++
-      leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(_.fullName) }
+    val columns = base.columns.map(c => c.fullName + " AS " + c.asName) ++
+      innerJoins.flatMap { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) } ++
+      leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) }
     sb.append(columns.mkString(", "))
 
     sb.append(" FROM ")
@@ -131,7 +131,11 @@ class Query[B <: TableDef[_], T, R](
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
-        Iterator.continually(mapper(rs)).takeWhile(_ => rs.next).toSeq
+        val list = new ListBuffer[R]
+        while(rs.next){
+          list += mapper(rs)
+        }
+        list.toSeq
       }
     }
   }

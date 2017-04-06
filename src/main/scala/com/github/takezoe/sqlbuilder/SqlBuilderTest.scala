@@ -1,12 +1,12 @@
 package com.github.takezoe.sqlbuilder
 
-import java.sql.ResultSet
+import java.sql.{DriverManager, ResultSet}
 
 object SqlBuilderTest extends App {
 
   val query = Users("u")
-    .leftJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
-    .filter { case u ~ c1 => (u.userId == "123") || (u.userId == "456") }
+    .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
+    //.filter { case u ~ c1 => (u.userId == "123") || (u.userId == "456") }
     .sortBy { case u ~ c1 => u.userId asc }
 
   query.toSql() match {
@@ -16,14 +16,23 @@ object SqlBuilderTest extends App {
     }
   }
 
+
+  Class.forName("org.h2.Driver")
+  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
+
+  query.list(conn).foreach { case u ~ c =>
+      println(u.userId + " " + u.userName + " " + c.map(_.companyName).getOrElse(""))
+  }
+
+  conn.close()
 }
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
-  val userId    = new Column[String](alias, "USER_ID")
-  val userName  = new Column[String](alias, "USER_NAME")
+  val userId    = new Column[String](alias, "ID")
+  val userName  = new Column[String](alias, "NAME")
   val companyId = new Column[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
 
@@ -43,8 +52,8 @@ case class Company(companyId: Int, companyName: String)
 
 class Companies(val alias: String) extends TableDef[Company] {
   val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "COMPANY_ID")
-  val companyName = new Column[String](alias, "COMPANY_NAME")
+  val companyId   = new Column[Int](alias, "ID")
+  val companyName = new Column[String](alias, "NAME")
   val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {

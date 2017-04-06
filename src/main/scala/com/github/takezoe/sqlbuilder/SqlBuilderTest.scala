@@ -1,13 +1,13 @@
 package com.github.takezoe.sqlbuilder
 
+import java.sql.ResultSet
+
 object SqlBuilderTest extends App {
 
   val query = Users("u")
     .innerJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
-    .innerJoin(Companies("c2")){ case u ~ c1 ~ c2 => u.companyId == c2.companyId }
-    .filter { case u ~ c1 ~ c2 => (u.userId == "123") || (u.userId == "456") }
-    .sortBy { case u ~ c1 ~ c2 => u.userId asc }
-    .map    { case u ~ c1 ~ c2 => u.userName ~ c1.companyName}
+    .filter { case u ~ c1 => (u.userId == "123") || (u.userId == "456") }
+    .sortBy { case u ~ c1 => u.userId asc }
 
   query.toSql() match {
     case (sql, bindParams) => {
@@ -18,26 +18,44 @@ object SqlBuilderTest extends App {
 
 }
 
-class Users(val alias: String) extends TableDef {
+case class User(userId: String, userName: String, companyId: Int)
+
+class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
   val companyId = new Column[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
+
+  override def toModel(rs: ResultSet): User = {
+    User(get(rs, userId), get(rs, userName), get(rs, companyId))
+  }
 }
 
 object Users {
-  def apply(alias: String) = new Query[Users, Users](new Users(alias), new Users(alias))
+  def apply(alias: String) = {
+    val users = new Users(alias)
+    new Query[Users, Users, User](users, users, users.toModel _)
+  }
 }
 
-class Companies(val alias: String) extends TableDef {
+case class Company(companyId: Int, companyName: String)
+
+class Companies(val alias: String) extends TableDef[Company] {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")
   val columns = Seq(companyId, companyName)
+
+  override def toModel(rs: ResultSet): Company = {
+    Company(get(rs, companyId), get(rs, companyName))
+  }
 }
 
 object Companies {
-  def apply(alias: String) = new Query[Companies, Companies](new Companies(alias), new Companies(alias))
+  def apply(alias: String) = {
+    val companies = new Companies(alias)
+    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
+  }
 }
 

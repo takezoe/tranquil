@@ -1,80 +1,68 @@
 package com.github.takezoe.sqlbuilder
 
-import scala.collection.mutable.ListBuffer
+import java.sql.{Connection, PreparedStatement, ResultSet}
 
-class Query[B <: TableDef, T](
+class Query[B <: TableDef[_], T, R](
   private val base: B,
   private val definitions: T,
+  private val mapper: ResultSet => R,
   private val filters: Seq[Condition] = Nil,
   private val sorts: Seq[Sort] = Nil,
-  private val innerJoins: Seq[(Query[_, _], Condition)] = Nil,
-  private val leftJoins: Seq[(Query[_, _], Condition)] = Nil,
-  private val columns: Seq[Column[_]] = Nil
+  private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
+  private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil
 ) {
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
   }
 
-  private def getBase: TableDef = base
+  private def getBase: TableDef[_] = base
 
-  def innerJoin[J <: TableDef](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
-    new Query[B, (T, J)](
+  def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
+    new Query[B, (T, J), (R, K)](
       base        = base,
       definitions = (definitions, table.base),
+      mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins :+ (table, on(definitions, table.base)),
-      leftJoins   = leftJoins,
-      columns     = columns
+      leftJoins   = leftJoins
     )
   }
 
-  def leftJoin[J <: TableDef](table: Query[J, J])(on: (T, J) => Condition): Query[B, (T, J)] = {
-    new Query[B, (T, J)](
+  def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
+    new Query[B, (T, J), (R, K)](
       base        = base,
       definitions = (definitions, table.base),
+      mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, on(definitions, table.base)),
-      columns     = columns
+      leftJoins   = leftJoins :+ (table, on(definitions, table.base))
     )
   }
 
-  def filter(condition: T => Condition): Query[B, T] = {
-    new Query[B, T](
+  def filter(condition: T => Condition): Query[B, T, R] = {
+    new Query[B, T, R](
       base        = base,
       definitions = definitions,
+      mapper      = mapper,
       filters     = filters :+ condition(definitions),
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins,
-      columns     = columns
+      leftJoins   = leftJoins
     )
   }
 
-  def sortBy(orderBy: T => Sort): Query[B, T] = {
-    new Query[B, T](
+  def sortBy(orderBy: T => Sort): Query[B, T, R] = {
+    new Query[B, T, R](
       base        = base,
       definitions = definitions,
+      mapper      = mapper,
       filters     = filters,
       sorts       = sorts :+ orderBy(definitions),
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins,
-      columns     = columns
-    )
-  }
-
-  def map(mapper: T => Columns): Query[B, T] = {
-    new Query[B, T](
-      base        = base,
-      definitions = definitions,
-      filters     = filters,
-      sorts       = sorts,
-      innerJoins  = innerJoins,
-      leftJoins   = leftJoins,
-      columns     = mapper(definitions).columns
+      leftJoins   = leftJoins
     )
   }
 
@@ -82,13 +70,18 @@ class Query[B <: TableDef, T](
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
-    if(columns.nonEmpty){
-      sb.append(columns.map { column =>
+    sb.append(base.columns.map { column =>
+      s"${column.alias}.${column.columnName}"
+    }.mkString(", "))
+
+    innerJoins.foreach { innerJoin =>
+      sb.append(innerJoin._1.getBase.columns.map { column =>
         s"${column.alias}.${column.columnName}"
       }.mkString(", "))
-    } else {
-      // TODO Includes columns of joined tables?
-      sb.append(base.columns.map { column =>
+    }
+
+    leftJoins.foreach { leftJoin =>
+      sb.append(leftJoin._1.getBase.columns.map { column =>
         s"${column.alias}.${column.columnName}"
       }.mkString(", "))
     }
@@ -141,4 +134,43 @@ class Query[B <: TableDef, T](
 
     (sb.toString(), bindParams)
   }
+
+  def list(conn: Connection): Seq[R] = {
+    val (sql, bindParams) = toSql()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()){ rs =>
+        Iterator.continually(mapper(rs)).takeWhile(_ => rs.next).toSeq
+      }
+    }
+  }
+
+  def single(conn: Connection): Option[R] = {
+    val (sql, bindParams) = toSql()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()) { rs =>
+        if (rs.next) {
+          Some(mapper(rs))
+        } else {
+          None
+        }
+      }
+    }
+  }
+
+  private def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
+    try {
+      f(resource)
+    } finally {
+      if(resource != null){
+        try {
+          resource.close()
+        } catch {
+          case e: Exception => e.printStackTrace()
+        }
+      }
+    }
+  }
+
 }

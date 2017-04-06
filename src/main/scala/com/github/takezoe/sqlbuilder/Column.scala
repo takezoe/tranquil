@@ -6,16 +6,16 @@ class Column[T](val alias: String, val columnName: String){
     Condition(s"${alias}.${columnName} == ${column.alias}.${column.columnName}")
   }
 
-  def ==(value: T): Condition = {
-    Condition(s"${alias}.${columnName} == '${value}'") // TODO Placeholder
+  def ==(value: T)(implicit binder: Binder[T]): Condition = {
+    Condition(s"${alias}.${columnName} == ?", Seq(Param(value, binder)))
   }
 
   def !=(column: Column[T]): Condition = {
     Condition(s"${alias}.${columnName} <> ${column.alias}.${column.columnName}")
   }
 
-  def !=(value: T): Condition = {
-    Condition(s"${alias}.${columnName} <> '${value}'") // TODO Placeholder
+  def !=(value: T)(implicit binder: Binder[T]): Condition = {
+    Condition(s"${alias}.${columnName} <> ?", Seq(Param(value, binder)))
   }
 
   def isNull(column: Column[T]): Condition = {

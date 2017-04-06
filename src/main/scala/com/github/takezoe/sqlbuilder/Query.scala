@@ -72,13 +72,10 @@ class Query[B <: TableDef[_], T, R](
 
     sb.append(base.columns.map(_.fullName).mkString(", "))
 
-    innerJoins.foreach { innerJoin =>
-      sb.append(innerJoin._1.getBase.columns.map(_.fullName).mkString(", "))
-    }
-
-    leftJoins.foreach { leftJoin =>
-      sb.append(leftJoin._1.getBase.columns.map(_.fullName).mkString(", "))
-    }
+    val columns = base.columns.map(_.fullName) ++
+      innerJoins.flatMap { case (query, _) => query.getBase.columns.map(_.fullName) } ++
+      leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(_.fullName) }
+    sb.append(columns.mkString(", "))
 
     sb.append(" FROM ")
     sb.append(base.tableName)

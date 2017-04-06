@@ -5,27 +5,45 @@ This is a experiment of type-safe SQL builder for Scala.
 At first, ready table definitions like this:
 
 ```scala
-class Users(val alias: String) extends TableDefinition {
+case class User(userId: String, userName: String, companyId: Int)
+
+class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
   val companyId = new Column[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
+  
+  override def toModel(rs: ResultSet): User = {
+    User(userId.get(rs), userName.get(rs), companyId.get(rs))
+  }
 }
 
 object Users {
-  def apply(alias: String) = new Query[Users, Users](new Users(alias), new Users(alias))
+  def apply(alias: String) = {
+    val users = new Users(alias)
+    new Query[Users, Users, User](users, users, users.toModel _)
+  }
 }
 
-class Companies(val alias: String) extends TableDefinition {
+case class Company(companyId: Int, companyName: String)
+
+class Companies(val alias: String) extends TableDef[Company] {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")
   val columns = Seq(companyId, companyName)
+
+  override def toModel(rs: ResultSet): Company = {
+    Company(companyId.get(rs), companyName.get(rs))
+  }
 }
 
 object Companies {
-  def apply(alias: String) = new Query[Companies, Companies](new Companies(alias), new Companies(alias))
+  def apply(alias: String) = {
+    val companies = new Companies(alias)
+    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
+  }
 }
 ```
 
@@ -33,19 +51,18 @@ Then you can assemble SQL using type-safe DSL.
 
 ```scala
 val query = Users("u")
-  .innerJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
+  .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
   .filter { case u ~ c => (u.userId == "takezoe") || (u.userId == "takezoen") }
   .sortBy { case u ~ c => u.userId asc }
-  .map    { case u ~ c => u.userName ~ c.companyName}
 
-println(query.sql)
+val conn: java.sql.Connection = ...
+val users: Seq[(User, Option[Company])] = query.list(conn)
 ```
 
 Generated SQL is:
 
 ```sql
-SELECT u.USER_NAME, c.COMPANY_NAME 
-FROM USERS u INNER JOIN COMPANIES c ON u.COMPANY_ID == c.COMPANY_ID
-WHERE (u.USER_ID == 'takezoe' OR u.USER_ID == 'takezoen') 
-ORDER BY u.USER_ID ASC
+ELECT u.USER_ID, u.USER_NAME, u.COMPANY_ID, c1.COMPANY_ID, c1.COMPANY_NAME 
+FROM USERS u LEFT JOIN COMPANIES c1 ON u.COMPANY_ID == c1.COMPANY_ID 
+WHERE (u.USER_ID == ? OR u.USER_ID == ?) ORDER BY u.USER_ID ASC
 ```

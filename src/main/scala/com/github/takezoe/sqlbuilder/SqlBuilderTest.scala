@@ -18,7 +18,7 @@ object SqlBuilderTest extends App {
 
 }
 
-case class User(userId: String, userName: String, companyId: Int)
+case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
@@ -28,7 +28,7 @@ class Users(val alias: String) extends TableDef[User] {
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
-    User(userId.get(rs), userName.get(rs), companyId.get(rs))
+    User(userId.get(rs), userName.get(rs), companyId.getOpt(rs))
   }
 }
 

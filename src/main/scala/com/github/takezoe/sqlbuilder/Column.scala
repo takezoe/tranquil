@@ -10,6 +10,11 @@ class Column[T](val alias: String, val columnName: String)(implicit val binder: 
     binder.get(fullName, rs)
   }
 
+  def getOpt(rs: ResultSet): Option[T] = {
+    Option(binder.get(fullName, rs))
+  }
+
+
   def ==(column: Column[T]): Condition = {
     Condition(s"${fullName} == ${column.fullName}")
   }

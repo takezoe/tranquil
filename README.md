@@ -9,8 +9,8 @@ case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
-  val userId    = new Column[String](alias, "ID")
-  val userName  = new Column[String](alias, "NAME")
+  val userId    = new Column[String](alias, "USER_ID")
+  val userName  = new Column[String](alias, "USER_NAME")
   val companyId = new Column[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
 
@@ -30,8 +30,8 @@ case class Company(companyId: Int, companyName: String)
 
 class Companies(val alias: String) extends TableDef[Company] {
   val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "ID")
-  val companyName = new Column[String](alias, "NAME")
+  val companyId   = new Column[Int](alias, "COMPANY_ID")
+  val companyName = new Column[String](alias, "COMPANY_NAME")
   val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {
@@ -63,12 +63,13 @@ Generated SQL is:
 
 ```sql
 SELECT 
-  u.ID         AS u_ID, 
-  u.NAME       AS u_NAME, 
-  u.COMPANY_ID AS u_COMPANY_ID, 
-  c.ID         AS c_ID, 
-  c.NAME       AS c_NAME 
+  u.USER_ID      AS u_USER_ID, 
+  u.USER_NAME    AS u_USER_NAME, 
+  u.COMPANY_ID   AS u_COMPANY_ID, 
+  c.COMPANY_ID   AS c_COMPANY_ID, 
+  c.COMPANY_NAME AS c_COMPANY_NAME 
 FROM USERS u 
-LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.ID 
-ORDER BY u.ID ASC
+LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.COMPANY_ID 
+WHERE (u.USER_ID = ? OR u.USER_ID = ?) 
+ORDER BY u.USER_ID ASC
 ```

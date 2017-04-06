@@ -5,17 +5,17 @@ This is a experiment of type-safe SQL builder for Scala.
 At first, ready table definitions like this:
 
 ```scala
-case class User(userId: String, userName: String, companyId: Int)
+case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users(val alias: String) extends TableDef[User] {
   val tableName = "USERS"
-  val userId    = new Column[String](alias, "USER_ID")
-  val userName  = new Column[String](alias, "USER_NAME")
+  val userId    = new Column[String](alias, "ID")
+  val userName  = new Column[String](alias, "NAME")
   val companyId = new Column[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
-  
+
   override def toModel(rs: ResultSet): User = {
-    User(userId.get(rs), userName.get(rs), companyId.get(rs))
+    User(userId.get(rs), userName.get(rs), companyId.getOpt(rs))
   }
 }
 
@@ -30,8 +30,8 @@ case class Company(companyId: Int, companyName: String)
 
 class Companies(val alias: String) extends TableDef[Company] {
   val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "COMPANY_ID")
-  val companyName = new Column[String](alias, "COMPANY_NAME")
+  val companyId   = new Column[Int](alias, "ID")
+  val companyName = new Column[String](alias, "NAME")
   val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {
@@ -62,7 +62,13 @@ val users: Seq[(User, Option[Company])] = query.list(conn)
 Generated SQL is:
 
 ```sql
-ELECT u.USER_ID, u.USER_NAME, u.COMPANY_ID, c1.COMPANY_ID, c1.COMPANY_NAME 
-FROM USERS u LEFT JOIN COMPANIES c1 ON u.COMPANY_ID == c1.COMPANY_ID 
-WHERE (u.USER_ID == ? OR u.USER_ID == ?) ORDER BY u.USER_ID ASC
+SELECT 
+  u.ID         AS u_ID, 
+  u.NAME       AS u_NAME, 
+  u.COMPANY_ID AS u_COMPANY_ID, 
+  c.ID         AS c_ID, 
+  c.NAME       AS c_NAME 
+FROM USERS u 
+LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.ID 
+ORDER BY u.ID ASC
 ```

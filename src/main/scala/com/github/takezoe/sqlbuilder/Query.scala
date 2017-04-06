@@ -30,11 +30,11 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
-    new Query[B, (T, J), (R, K)](
+  def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, Option[K])] = {
+    new Query[B, (T, J), (R, Option[K])](
       base        = base,
       definitions = (definitions, table.base),
-      mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(table.base.columns.head.get(rs) == null) None else Some(table.base.toModel(rs))),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -70,20 +70,14 @@ class Query[B <: TableDef[_], T, R](
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
-    sb.append(base.columns.map { column =>
-      s"${column.alias}.${column.columnName}"
-    }.mkString(", "))
+    sb.append(base.columns.map(_.fullName).mkString(", "))
 
     innerJoins.foreach { innerJoin =>
-      sb.append(innerJoin._1.getBase.columns.map { column =>
-        s"${column.alias}.${column.columnName}"
-      }.mkString(", "))
+      sb.append(innerJoin._1.getBase.columns.map(_.fullName).mkString(", "))
     }
 
     leftJoins.foreach { leftJoin =>
-      sb.append(leftJoin._1.getBase.columns.map { column =>
-        s"${column.alias}.${column.columnName}"
-      }.mkString(", "))
+      sb.append(leftJoin._1.getBase.columns.map(_.fullName).mkString(", "))
     }
 
     sb.append(" FROM ")

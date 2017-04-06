@@ -5,7 +5,7 @@ import java.sql.ResultSet
 object SqlBuilderTest extends App {
 
   val query = Users("u")
-    .innerJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
+    .leftJoin(Companies("c1")){ case u ~ c => u.companyId == c.companyId }
     .filter { case u ~ c1 => (u.userId == "123") || (u.userId == "456") }
     .sortBy { case u ~ c1 => u.userId asc }
 
@@ -28,7 +28,7 @@ class Users(val alias: String) extends TableDef[User] {
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
-    User(get(rs, userId), get(rs, userName), get(rs, companyId))
+    User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
 }
 
@@ -48,7 +48,7 @@ class Companies(val alias: String) extends TableDef[Company] {
   val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {
-    Company(get(rs, companyId), get(rs, companyName))
+    Company(companyId.get(rs), companyName.get(rs))
   }
 }
 

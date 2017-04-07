@@ -5,16 +5,23 @@ import java.sql.{DriverManager, ResultSet}
 object SqlBuilderTest extends App {
 
   val query = Users("u")
-    .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
-    .filter { case u ~ c1 => (u.userId == "takezoe") || (u.userId == "takezoen") }
+    .leftJoin(Companies("c")){ case u ~ c => u.companyId eq c.companyId }
+    .filter { case u ~ c1 => (u.userId eq "takezoe") || (u.userId eq "takezoen") }
     .sortBy { case u ~ c1 => u.userId asc }
 
-  query.toSql() match {
+  query.selectStatement() match {
     case (sql, bindParams) => {
       println(sql)
       println(bindParams.params.map(_.value))
     }
   }
+
+  Users("u")
+    .filter(_.userId eq "1")
+    .set(_.companyId -> 1)
+    .set(_.userName  -> "takezoe")
+    .update(null)
+
 
 //  Class.forName("org.h2.Driver")
 //  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
@@ -43,7 +50,7 @@ class Users(val alias: String) extends TableDef[User] {
 object Users {
   def apply(alias: String) = {
     val users = new Users(alias)
-    new SingleTableQuery[Users, Users, User](users, users, users.toModel _)
+    new SingleTableQuery[Users, User](users, users.toModel _)
   }
 }
 
@@ -63,7 +70,7 @@ class Companies(val alias: String) extends TableDef[Company] {
 object Companies {
   def apply(alias: String) = {
     val companies = new Companies(alias)
-    new SingleTableQuery[Companies, Companies, Company](companies, companies, companies.toModel _)
+    new SingleTableQuery[Companies, Company](new Companies(alias), companies.toModel _)
   }
 }
 

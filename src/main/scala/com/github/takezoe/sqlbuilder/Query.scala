@@ -1,22 +1,20 @@
 package com.github.takezoe.sqlbuilder
 
 import java.sql.{Connection, ResultSet}
-
 import scala.collection.mutable.ListBuffer
+import JDBCUtils._
 
-class SingleTableQuery[B <: TableDef[_], T, R](
+class SingleTableQuery[B <: TableDef[_], R](
   private val base: B,
-  private val definitions: T,
   private val mapper: ResultSet => R,
   private val filters: Seq[Condition] = Nil
-) extends Query[B, T, R](base, definitions, mapper, filters) {
+) extends Query[B, B, R](base, base, mapper, filters) {
 
-  override def filter(condition: T => Condition): SingleTableQuery[B, T, R] = {
-    new SingleTableQuery[B, T, R](
+  override def filter(condition: B => Condition): SingleTableQuery[B, R] = {
+    new SingleTableQuery[B, R](
       base        = base,
-      definitions = definitions,
       mapper      = mapper,
-      filters     = filters :+ condition(definitions)
+      filters     = filters :+ condition(base)
     )
   }
 
@@ -34,6 +32,55 @@ class SingleTableQuery[B <: TableDef[_], T, R](
 
   def delete(conn: Connection): Int = {
     val (sql, bindParams) = deleteStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      stmt.executeUpdate()
+    }
+  }
+
+  def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
+    new UpdateQuery[B](base, Seq(f(base)), filters)
+  }
+
+}
+
+class UpdateQuery[B <: TableDef[_]](
+  private val base: B,
+  private val updateColumns: Seq[UpdateColumn],
+  private val filters: Seq[Condition] = Nil
+){
+
+  def filter(condition: B => Condition): UpdateQuery[B] = {
+    new UpdateQuery[B](
+      base          = base,
+      updateColumns = updateColumns,
+      filters       = filters :+ condition(base)
+    )
+  }
+
+  def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
+    new UpdateQuery[B](base, updateColumns :+ f(base), filters)
+  }
+
+  def updateStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+    val sb = new StringBuilder()
+    sb.append("UPDATE ")
+    sb.append(base.tableName)
+    sb.append(" SET ")
+    sb.append(updateColumns.map(_.sql).mkString(", "))
+    bindParams ++= updateColumns.map(_.parameter)
+
+    if(filters.nonEmpty){
+      sb.append(" WHERE ")
+      sb.append(filters.map(_.sql).mkString(" AND "))
+      bindParams ++= filters.flatMap(_.parameters)
+    }
+
+    (sb.toString, bindParams)
+  }
+
+  def update(conn: Connection): Int = {
+    val (sql, bindParams) = updateStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       stmt.executeUpdate()
@@ -192,7 +239,11 @@ class Query[B <: TableDef[_], T, R](
     }
   }
 
-  protected def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
+}
+
+object JDBCUtils {
+
+  def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
     try {
       f(resource)
     } finally {

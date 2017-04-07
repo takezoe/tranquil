@@ -20,19 +20,19 @@ class Column[T](val alias: String, val columnName: String)(implicit val binder: 
   }
 
 
-  def ==(column: Column[T]): Condition = {
+  def eq(column: Column[T]): Condition = {
     Condition(s"${fullName} = ${column.fullName}")
   }
 
-  def ==(value: T)(implicit binder: Binder[T]): Condition = {
+  def eq(value: T)(implicit binder: Binder[T]): Condition = {
     Condition(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
-  def !=(column: Column[T]): Condition = {
+  def ne(column: Column[T]): Condition = {
     Condition(s"${fullName} <> ${column.fullName}")
   }
 
-  def !=(value: T)(implicit binder: Binder[T]): Condition = {
+  def ne(value: T)(implicit binder: Binder[T]): Condition = {
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
@@ -46,6 +46,10 @@ class Column[T](val alias: String, val columnName: String)(implicit val binder: 
 
   def desc: Sort = {
     Sort(s"${fullName} DESC")
+  }
+
+  def -> (value: T)(implicit binder: Binder[T]): UpdateColumn = {
+    UpdateColumn(s"${fullName} = ?", Param(value, binder))
   }
 
 //  def ~(column: Column[_]): Columns = Columns(Seq(this, column))

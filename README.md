@@ -56,20 +56,44 @@ val query = Users("u")
   .sortBy { case u ~ c => u.userId asc }
 
 val conn: java.sql.Connection = ...
-val users: Seq[(User, Option[Company])] = query.list(conn)
+
+// SELECT
+val users: Seq[(User, Option[Company])] =
+  Users("u")
+    .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
+    .filter { case u ~ c => (u.userId == "takezoe") || (u.userId == "takezoen") }
+    .sortBy { case u ~ c => u.userId asc }
+    .list(conn)
+
+// INSERT
+Users()
+  .insert { u => (u.userId -> "takezoe") ~ (u.userName -> "Naoki Takezoe") }
+  .execute(conn)
+
+// UPDATE
+Users()
+  .update(_.userName -> "N. Takezoe")
+  .filter(_.userId eq "takezoe")
+  .execute(conn)
+
+// DELETE
+Users()
+  .delete()
+  .filter(_.userId eq "takezoe")
+  .execute(conn)
 ```
 
 Generated SQL is:
 
 ```sql
-SELECT 
-  u.USER_ID      AS u_USER_ID, 
-  u.USER_NAME    AS u_USER_NAME, 
-  u.COMPANY_ID   AS u_COMPANY_ID, 
-  c.COMPANY_ID   AS c_COMPANY_ID, 
-  c.COMPANY_NAME AS c_COMPANY_NAME 
-FROM USERS u 
-LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.COMPANY_ID 
-WHERE (u.USER_ID = ? OR u.USER_ID = ?) 
+SELECT
+  u.USER_ID      AS u_USER_ID,
+  u.USER_NAME    AS u_USER_NAME,
+  u.COMPANY_ID   AS u_COMPANY_ID,
+  c.COMPANY_ID   AS c_COMPANY_ID,
+  c.COMPANY_NAME AS c_COMPANY_NAME
+FROM USERS u
+LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.COMPANY_ID
+WHERE (u.USER_ID = ? OR u.USER_ID = ?)
 ORDER BY u.USER_ID ASC
 ```

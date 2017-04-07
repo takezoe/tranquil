@@ -1,8 +1,46 @@
 package com.github.takezoe.sqlbuilder
 
-import java.sql.{Connection, PreparedStatement, ResultSet}
+import java.sql.{Connection, ResultSet}
 
 import scala.collection.mutable.ListBuffer
+
+class SingleTableQuery[B <: TableDef[_], T, R](
+  private val base: B,
+  private val definitions: T,
+  private val mapper: ResultSet => R,
+  private val filters: Seq[Condition] = Nil
+) extends Query[B, T, R](base, definitions, mapper, filters) {
+
+  override def filter(condition: T => Condition): SingleTableQuery[B, T, R] = {
+    new SingleTableQuery[B, T, R](
+      base        = base,
+      definitions = definitions,
+      mapper      = mapper,
+      filters     = filters :+ condition(definitions)
+    )
+  }
+
+  def deleteStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+    val sb = new StringBuilder()
+    sb.append("DELETE FROM ")
+    sb.append(base.tableName)
+    if(filters.nonEmpty){
+      sb.append(" WHERE ")
+      sb.append(filters.map(_.sql).mkString(" AND "))
+      bindParams ++= filters.flatMap(_.parameters)
+    }
+    (sb.toString, bindParams)
+  }
+
+  def delete(conn: Connection): Int = {
+    val (sql, bindParams) = deleteStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      stmt.executeUpdate()
+    }
+  }
+
+}
 
 class Query[B <: TableDef[_], T, R](
   private val base: B,
@@ -68,7 +106,7 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def toSql(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+  def selectStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
@@ -88,7 +126,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.toSql(bindParams)._1)
+        sb.append(query.selectStatement(bindParams)._1)
         sb.append(")")
       }
       sb.append(" ")
@@ -104,7 +142,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.toSql(bindParams))
+        sb.append(query.selectStatement(bindParams))
         sb.append(")")
       }
       sb.append(" ")
@@ -127,7 +165,7 @@ class Query[B <: TableDef[_], T, R](
   }
 
   def list(conn: Connection): Seq[R] = {
-    val (sql, bindParams) = toSql()
+    val (sql, bindParams) = selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
@@ -141,7 +179,7 @@ class Query[B <: TableDef[_], T, R](
   }
 
   def single(conn: Connection): Option[R] = {
-    val (sql, bindParams) = toSql()
+    val (sql, bindParams) = selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()) { rs =>
@@ -154,7 +192,7 @@ class Query[B <: TableDef[_], T, R](
     }
   }
 
-  private def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
+  protected def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
     try {
       f(resource)
     } finally {

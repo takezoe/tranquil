@@ -16,7 +16,6 @@ object SqlBuilderTest extends App {
     }
   }
 
-
 //  Class.forName("org.h2.Driver")
 //  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
 //
@@ -44,7 +43,7 @@ class Users(val alias: String) extends TableDef[User] {
 object Users {
   def apply(alias: String) = {
     val users = new Users(alias)
-    new Query[Users, Users, User](users, users, users.toModel _)
+    new SingleTableQuery[Users, Users, User](users, users, users.toModel _)
   }
 }
 
@@ -64,7 +63,7 @@ class Companies(val alias: String) extends TableDef[Company] {
 object Companies {
   def apply(alias: String) = {
     val companies = new Companies(alias)
-    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
+    new SingleTableQuery[Companies, Companies, Company](companies, companies, companies.toModel _)
   }
 }
 

@@ -38,6 +38,7 @@ class SingleTableQuery[B <: TableDef[_], R](
     }
   }
 
+  // TODO update by the model as well
   def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
     new UpdateQuery[B](base, Seq(f(base)), filters)
   }
@@ -68,7 +69,7 @@ class UpdateQuery[B <: TableDef[_]](
     sb.append(base.tableName)
     sb.append(" SET ")
     sb.append(updateColumns.map(_.sql).mkString(", "))
-    bindParams ++= updateColumns.map(_.parameter)
+    bindParams ++= updateColumns.flatMap(_.parameters)
 
     if(filters.nonEmpty){
       sb.append(" WHERE ")

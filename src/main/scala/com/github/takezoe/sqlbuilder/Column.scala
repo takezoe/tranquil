@@ -49,7 +49,7 @@ class Column[T](val alias: String, val columnName: String)(implicit val binder: 
   }
 
   def -> (value: T)(implicit binder: Binder[T]): UpdateColumn = {
-    UpdateColumn(s"${fullName} = ?", Param(value, binder))
+    UpdateColumn(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
 //  def ~(column: Column[_]): Columns = Columns(Seq(this, column))

@@ -20,7 +20,13 @@ case class Condition(sql: String, parameters: Seq[Param[_]] = Nil){
 /**
  * Updating parameters in update statement
  */
-case class UpdateColumn(sql: String, parameter: Param[_])
+case class UpdateColumn(sql: String, parameters: Seq[Param[_]]){
+
+  def ~ (updateColumn: UpdateColumn): UpdateColumn = {
+    UpdateColumn(s"${sql}, ${updateColumn.sql}", parameters ++ updateColumn.parameters)
+  }
+
+}
 
 case class Param[T](value: T, binder: Binder[T]){
   def set(stmt: PreparedStatement, i: Int): Unit = binder.set(value, stmt, i)

@@ -16,11 +16,10 @@ object SqlBuilderTest extends App {
     }
   }
 
-  Users("u")
+  println(Users("u")
     .filter(_.userId eq "1")
-    .set(_.companyId -> 1)
-    .set(_.userName  -> "takezoe")
-    .update(null)
+    .set { u => (u.companyId -> 1) ~ (u.userName  -> "takezoe") }
+    .updateStatement())
 
 
 //  Class.forName("org.h2.Driver")

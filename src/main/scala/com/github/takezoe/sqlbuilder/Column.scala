@@ -2,10 +2,10 @@ package com.github.takezoe.sqlbuilder
 
 import java.sql.ResultSet
 
-class Column[T](val alias: String, val columnName: String)(implicit val binder: Binder[T]){
+class Column[T](val alias: Option[String], val columnName: String)(implicit val binder: Binder[T]){
 
-  val fullName = s"${alias}.${columnName}"
-  val asName   = s"${alias}_${columnName}"
+  val fullName = alias.map { x => x + "." + alias } getOrElse columnName
+  val asName   = alias.map { x => x + "_" + alias } getOrElse columnName
 
   def get(rs: ResultSet): T = {
     binder.get(asName, rs)
@@ -49,7 +49,7 @@ class Column[T](val alias: String, val columnName: String)(implicit val binder: 
   }
 
   def -> (value: T)(implicit binder: Binder[T]): UpdateColumn = {
-    UpdateColumn(s"${fullName} = ?", Seq(Param(value, binder)))
+    UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
 //  def ~(column: Column[_]): Columns = Columns(Seq(this, column))

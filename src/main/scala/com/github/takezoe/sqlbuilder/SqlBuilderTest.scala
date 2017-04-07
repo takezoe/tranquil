@@ -16,36 +16,42 @@ object SqlBuilderTest extends App {
     }
   }
 
-  Class.forName("org.h2.Driver")
-  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
+//  Class.forName("org.h2.Driver")
+//  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
 
-  Users("u")
+  val query1 = Users()
     .insert { u =>
       (u.userId    -> "takezoe") ~
       (u.userName  -> "Naoki Takezoe") ~
       (u.companyId -> 1)
     }
-    .execute(conn)
 
-  Users("u")
-    .update
-      { u =>
-        (u.userName  -> "N. Takezoe") ~
-        (u.companyId -> 1)
-      }
-      { u => u.userId eq "takezoe" }
-    .execute(conn)
+  println(query1.insertStatement())
 
-  query.list(conn).foreach { case u ~ c =>
-      println(u.userId + " " + u.userName + " " + c.map(_.companyName).getOrElse(""))
-  }
+  val query2 = Users()
+    .update { u =>
+      (u.userName  -> "N. Takezoe") ~
+      (u.companyId -> 1)
+    }
+    .filter(_.userId eq "takezoe")
 
-  conn.close()
+  println(query2.updateStatement())
+
+  val query3 = Users().delete()
+    .filter(_.userId eq "takezoe")
+
+  println(query3.deleteStatement())
+
+//  query.list(conn).foreach { case u ~ c =>
+//      println(u.userId + " " + u.userName + " " + c.map(_.companyName).getOrElse(""))
+//  }
+//
+//  conn.close()
 }
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
-class Users(val alias: String) extends TableDef[User] {
+class Users(val alias: Option[String]) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
@@ -58,15 +64,19 @@ class Users(val alias: String) extends TableDef[User] {
 }
 
 object Users {
+  def apply() = {
+    val users = new Users(None)
+    new SingleTableAction[Users](users)
+  }
   def apply(alias: String) = {
-    val users = new Users(alias)
-    new SingleTableQuery[Users, User](users, users.toModel _)
+    val users = new Users(Some(alias))
+    new Query[Users, Users, User](users, users, users.toModel _)
   }
 }
 
 case class Company(companyId: Int, companyName: String)
 
-class Companies(val alias: String) extends TableDef[Company] {
+class Companies(val alias: Option[String]) extends TableDef[Company] {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")
@@ -78,9 +88,13 @@ class Companies(val alias: String) extends TableDef[Company] {
 }
 
 object Companies {
+  def apply() = {
+    val companies = new Companies(None)
+    new SingleTableAction[Companies](companies)
+  }
   def apply(alias: String) = {
-    val companies = new Companies(alias)
-    new SingleTableQuery[Companies, Company](new Companies(alias), companies.toModel _)
+    val companies = new Companies(Some(alias))
+    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
   }
 }
 

@@ -4,109 +4,6 @@ import java.sql.{Connection, ResultSet}
 import scala.collection.mutable.ListBuffer
 import JDBCUtils._
 
-class SingleTableAction[B <: TableDef[_]](base: B){
-
-  def insert(updateColumns: B => UpdateColumn): InsertAction = {
-    new InsertAction(base, updateColumns(base))
-  }
-
-  def update(updateColumns: B => UpdateColumn): UpdateAction[B] = {
-    new UpdateAction(base, updateColumns(base))
-  }
-
-  def delete(): DeleteAction[B] = {
-    new DeleteAction(base)
-  }
-
-}
-
-class InsertAction(tableDef: TableDef[_], updateColumn: UpdateColumn){
-
-  def insertStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
-    val sb = new StringBuilder()
-    sb.append("INSERT INTO ")
-    sb.append(tableDef.tableName)
-    sb.append(" (")
-    sb.append(updateColumn.columns.map(_.columnName).mkString(", "))
-    sb.append(") VALUES (")
-    sb.append(updateColumn.columns.map(_ => "?").mkString(", "))
-    sb.append(")")
-    bindParams ++= updateColumn.parameters
-
-    (sb.toString, bindParams)
-  }
-
-  def execute(conn: Connection): Int = {
-    val (sql, bindParams) = insertStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      stmt.executeUpdate()
-    }
-  }
-
-}
-
-class UpdateAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn, filters: Seq[Condition] = Nil){
-
-  def filter(filter: T => Condition): UpdateAction[T] = {
-    new UpdateAction[T](tableDef, updateColumn, filters :+ filter(tableDef))
-  }
-
-  def updateStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
-    val sb = new StringBuilder()
-    sb.append("UPDATE ")
-    sb.append(tableDef.tableName)
-    sb.append(" SET ")
-    sb.append(updateColumn.columns.map { column => s"${column.columnName} = ?"}.mkString(", "))
-    bindParams ++= updateColumn.parameters
-
-    if(filters.nonEmpty){
-      sb.append(" WHERE ")
-      sb.append(filters.map(_.sql).mkString(" AND "))
-      bindParams ++= filters.flatMap(_.parameters)
-    }
-
-    (sb.toString, bindParams)
-  }
-
-  def execute(conn: Connection): Int = {
-    val (sql, bindParams) = updateStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      stmt.executeUpdate()
-    }
-  }
-
-}
-
-class DeleteAction[T <: TableDef[_]](tableDef: T, filters: Seq[Condition] = Nil){
-
-  def filter(filter: T => Condition): DeleteAction[T] = {
-    new DeleteAction[T](tableDef, filters :+ filter(tableDef))
-  }
-
-  def deleteStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
-    val sb = new StringBuilder()
-    sb.append("DELETE FROM ")
-    sb.append(tableDef.tableName)
-    if(filters.nonEmpty){
-      sb.append(" WHERE ")
-      sb.append(filters.map(_.sql).mkString(" AND "))
-      bindParams ++= filters.flatMap(_.parameters)
-    }
-    (sb.toString, bindParams)
-  }
-
-  def execute(conn: Connection): Int = {
-    val (sql, bindParams) = deleteStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      stmt.executeUpdate()
-    }
-  }
-
-}
-
 class Query[B <: TableDef[_], T, R](
   private val base: B,
   private val definitions: T,
@@ -253,24 +150,6 @@ class Query[B <: TableDef[_], T, R](
           Some(mapper(rs))
         } else {
           None
-        }
-      }
-    }
-  }
-
-}
-
-object JDBCUtils {
-
-  def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
-    try {
-      f(resource)
-    } finally {
-      if(resource != null){
-        try {
-          resource.close()
-        } catch {
-          case e: Exception => e.printStackTrace()
         }
       }
     }

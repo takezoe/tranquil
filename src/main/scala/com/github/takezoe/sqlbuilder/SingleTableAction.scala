@@ -1,7 +1,6 @@
 package com.github.takezoe.sqlbuilder
 
 import java.sql.Connection
-import JDBCUtils._
 
 class SingleTableAction[B <: TableDef[_]](base: B){
 

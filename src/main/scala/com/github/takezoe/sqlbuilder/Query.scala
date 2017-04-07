@@ -2,7 +2,6 @@ package com.github.takezoe.sqlbuilder
 
 import java.sql.{Connection, ResultSet}
 import scala.collection.mutable.ListBuffer
-import JDBCUtils._
 
 class Query[B <: TableDef[_], T, R](
   private val base: B,

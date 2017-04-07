@@ -20,10 +20,10 @@ case class Condition(sql: String, parameters: Seq[Param[_]] = Nil){
 /**
  * Updating parameters in update statement
  */
-case class UpdateColumn(sql: String, parameters: Seq[Param[_]]){
+case class UpdateColumn(columns: Seq[Column[_]], parameters: Seq[Param[_]]){
 
   def ~ (updateColumn: UpdateColumn): UpdateColumn = {
-    UpdateColumn(s"${sql}, ${updateColumn.sql}", parameters ++ updateColumn.parameters)
+    UpdateColumn(columns ++ updateColumn.columns, parameters ++ updateColumn.parameters)
   }
 
 }

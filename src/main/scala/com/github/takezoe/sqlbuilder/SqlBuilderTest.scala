@@ -16,20 +16,31 @@ object SqlBuilderTest extends App {
     }
   }
 
-  println(Users("u")
-    .filter(_.userId eq "1")
-    .set { u => (u.companyId -> 1) ~ (u.userName  -> "takezoe") }
-    .updateStatement())
+  Class.forName("org.h2.Driver")
+  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
 
+  Users("u")
+    .insert { u =>
+      (u.userId    -> "takezoe") ~
+      (u.userName  -> "Naoki Takezoe") ~
+      (u.companyId -> 1)
+    }
+    .execute(conn)
 
-//  Class.forName("org.h2.Driver")
-//  val conn = DriverManager.getConnection("jdbc:h2:tcp://localhost/data", "sa", "sa")
-//
-//  query.list(conn).foreach { case u ~ c =>
-//      println(u.userId + " " + u.userName + " " + c.map(_.companyName).getOrElse(""))
-//  }
-//
-//  conn.close()
+  Users("u")
+    .update
+      { u =>
+        (u.userName  -> "N. Takezoe") ~
+        (u.companyId -> 1)
+      }
+      { u => u.userId eq "takezoe" }
+    .execute(conn)
+
+  query.list(conn).foreach { case u ~ c =>
+      println(u.userId + " " + u.userName + " " + c.map(_.companyName).getOrElse(""))
+  }
+
+  conn.close()
 }
 
 case class User(userId: String, userName: String, companyId: Option[Int])

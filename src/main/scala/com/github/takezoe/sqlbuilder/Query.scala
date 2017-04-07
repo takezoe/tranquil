@@ -6,70 +6,58 @@ import JDBCUtils._
 
 class SingleTableQuery[B <: TableDef[_], R](
   private val base: B,
-  private val mapper: ResultSet => R,
-  private val filters: Seq[Condition] = Nil
-) extends Query[B, B, R](base, base, mapper, filters) {
+  private val mapper: ResultSet => R
+) extends Query[B, B, R](base, base, mapper) {
 
-  override def filter(condition: B => Condition): SingleTableQuery[B, R] = {
-    new SingleTableQuery[B, R](
-      base        = base,
-      mapper      = mapper,
-      filters     = filters :+ condition(base)
-    )
+  def insert(updateColumns: B => UpdateColumn): InsertAction = {
+    new InsertAction(base, updateColumns(base))
   }
 
-  def deleteStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+  def update(updateColumns: B => UpdateColumn)(filter: B => Condition): UpdateAction = {
+    new UpdateAction(base, updateColumns(base), Seq(filter(base)))
+  }
+
+  def delete(filter: B => Condition): DeleteAction = {
+    new DeleteAction(base, Seq(filter(base)))
+  }
+
+}
+
+class InsertAction(tableDef: TableDef[_], updateColumn: UpdateColumn){
+
+  def insertStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
-    sb.append("DELETE FROM ")
-    sb.append(base.tableName)
-    if(filters.nonEmpty){
-      sb.append(" WHERE ")
-      sb.append(filters.map(_.sql).mkString(" AND "))
-      bindParams ++= filters.flatMap(_.parameters)
-    }
+    sb.append("INSERT INTO ")
+    sb.append(tableDef.tableName)
+    sb.append(" (")
+    sb.append(updateColumn.columns.map(_.columnName).mkString(", "))
+    sb.append(") VALUES (")
+    sb.append(updateColumn.columns.map(_ => "?").mkString(", "))
+    sb.append(")")
+    bindParams ++= updateColumn.parameters
+
     (sb.toString, bindParams)
   }
 
-  def delete(conn: Connection): Int = {
-    val (sql, bindParams) = deleteStatement()
+  def execute(conn: Connection): Int = {
+    val (sql, bindParams) = insertStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       stmt.executeUpdate()
     }
   }
 
-  // TODO update by the model as well
-  def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
-    new UpdateQuery[B](base, Seq(f(base)), filters)
-  }
-
 }
 
-class UpdateQuery[B <: TableDef[_]](
-  private val base: B,
-  private val updateColumns: Seq[UpdateColumn],
-  private val filters: Seq[Condition] = Nil
-){
-
-  def filter(condition: B => Condition): UpdateQuery[B] = {
-    new UpdateQuery[B](
-      base          = base,
-      updateColumns = updateColumns,
-      filters       = filters :+ condition(base)
-    )
-  }
-
-  def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
-    new UpdateQuery[B](base, updateColumns :+ f(base), filters)
-  }
+class UpdateAction(tableDef: TableDef[_], updateColumn: UpdateColumn, filters: Seq[Condition]){
 
   def updateStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("UPDATE ")
-    sb.append(base.tableName)
+    sb.append(tableDef.tableName)
     sb.append(" SET ")
-    sb.append(updateColumns.map(_.sql).mkString(", "))
-    bindParams ++= updateColumns.flatMap(_.parameters)
+    sb.append(updateColumn.columns.map { column => s"${column.columnName} = ?"}.mkString(", "))
+    bindParams ++= updateColumn.parameters
 
     if(filters.nonEmpty){
       sb.append(" WHERE ")
@@ -80,7 +68,7 @@ class UpdateQuery[B <: TableDef[_]](
     (sb.toString, bindParams)
   }
 
-  def update(conn: Connection): Int = {
+  def execute(conn: Connection): Int = {
     val (sql, bindParams) = updateStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
@@ -89,6 +77,76 @@ class UpdateQuery[B <: TableDef[_]](
   }
 
 }
+
+class DeleteAction(tableDef: TableDef[_], filters: Seq[Condition] = Nil){
+
+  def deleteStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+    val sb = new StringBuilder()
+    sb.append("DELETE FROM ")
+    sb.append(tableDef.tableName)
+    if(filters.nonEmpty){
+      sb.append(" WHERE ")
+      sb.append(filters.map(_.sql).mkString(" AND "))
+      bindParams ++= filters.flatMap(_.parameters)
+    }
+    (sb.toString, bindParams)
+  }
+
+  def execute(conn: Connection): Int = {
+    val (sql, bindParams) = deleteStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      stmt.executeUpdate()
+    }
+  }
+
+}
+
+//
+//class UpdateQuery[B <: TableDef[_]](
+//  private val base: B,
+//  private val updateColumns: Seq[UpdateColumn],
+//  private val filters: Seq[Condition] = Nil
+//){
+//
+//  def filter(condition: B => Condition): UpdateQuery[B] = {
+//    new UpdateQuery[B](
+//      base          = base,
+//      updateColumns = updateColumns,
+//      filters       = filters :+ condition(base)
+//    )
+//  }
+//
+//  def set(f: (B) => UpdateColumn): UpdateQuery[B] = {
+//    new UpdateQuery[B](base, updateColumns :+ f(base), filters)
+//  }
+//
+//  def updateStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+//    val sb = new StringBuilder()
+//    sb.append("UPDATE ")
+//    sb.append(base.tableName)
+//    sb.append(" SET ")
+//    sb.append(updateColumns.map(_.sql).mkString(", "))
+//    bindParams ++= updateColumns.flatMap(_.parameters)
+//
+//    if(filters.nonEmpty){
+//      sb.append(" WHERE ")
+//      sb.append(filters.map(_.sql).mkString(" AND "))
+//      bindParams ++= filters.flatMap(_.parameters)
+//    }
+//
+//    (sb.toString, bindParams)
+//  }
+//
+//  def update(conn: Connection): Int = {
+//    val (sql, bindParams) = updateStatement()
+//    using(conn.prepareStatement(sql)){ stmt =>
+//      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+//      stmt.executeUpdate()
+//    }
+//  }
+//
+//}
 
 class Query[B <: TableDef[_], T, R](
   private val base: B,

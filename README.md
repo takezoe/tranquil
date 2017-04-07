@@ -2,7 +2,7 @@
 
 This is a experiment of type-safe SQL builder for Scala.
 
-At first, ready table definitions like this:
+At first, ready table definitions like following:
 
 ```scala
 case class User(userId: String, userName: String, companyId: Option[Int])
@@ -59,7 +59,26 @@ val users: Seq[(User, Option[Company])] =
     .filter { case u ~ c => (u.userId eq "takezoe") || (u.userId eq "takezoen") }
     .sortBy { case u ~ c => u.userId asc }
     .list(conn)
+```
 
+Generated SQL is:
+
+```sql
+SELECT
+  u.USER_ID      AS u_USER_ID,
+  u.USER_NAME    AS u_USER_NAME,
+  u.COMPANY_ID   AS u_COMPANY_ID,
+  c.COMPANY_ID   AS c_COMPANY_ID,
+  c.COMPANY_NAME AS c_COMPANY_NAME
+FROM USERS u
+LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.COMPANY_ID
+WHERE (u.USER_ID = ? OR u.USER_ID = ?)
+ORDER BY u.USER_ID ASC
+```
+
+Also you can assemble insert, update and delete SQl in the same way.
+
+```scala
 // INSERT
 Users()
   .insert { u => (u.userId -> "takezoe") ~ (u.userName -> "Naoki Takezoe") }
@@ -76,19 +95,4 @@ Users()
   .delete()
   .filter(_.userId eq "takezoe")
   .execute(conn)
-```
-
-Generated SQL is:
-
-```sql
-SELECT
-  u.USER_ID      AS u_USER_ID,
-  u.USER_NAME    AS u_USER_NAME,
-  u.COMPANY_ID   AS u_COMPANY_ID,
-  c.COMPANY_ID   AS c_COMPANY_ID,
-  c.COMPANY_NAME AS c_COMPANY_NAME
-FROM USERS u
-LEFT JOIN COMPANIES c ON u.COMPANY_ID = c.COMPANY_ID
-WHERE (u.USER_ID = ? OR u.USER_ID = ?)
-ORDER BY u.USER_ID ASC
 ```

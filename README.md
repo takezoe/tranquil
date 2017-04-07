@@ -50,18 +50,13 @@ object Companies {
 Then you can assemble SQL using type-safe DSL.
 
 ```scala
-val query = Users("u")
-  .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
-  .filter { case u ~ c => (u.userId == "takezoe") || (u.userId == "takezoen") }
-  .sortBy { case u ~ c => u.userId asc }
-
 val conn: java.sql.Connection = ...
 
 // SELECT
 val users: Seq[(User, Option[Company])] =
   Users("u")
-    .leftJoin(Companies("c")){ case u ~ c => u.companyId == c.companyId }
-    .filter { case u ~ c => (u.userId == "takezoe") || (u.userId == "takezoen") }
+    .leftJoin(Companies("c")){ case u ~ c => u.companyId eq c.companyId }
+    .filter { case u ~ c => (u.userId eq "takezoe") || (u.userId eq "takezoen") }
     .sortBy { case u ~ c => u.userId asc }
     .list(conn)
 

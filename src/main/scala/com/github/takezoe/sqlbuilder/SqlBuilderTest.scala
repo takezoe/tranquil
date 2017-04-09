@@ -55,7 +55,7 @@ class Users(val alias: Option[String]) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
-  val companyId = new Column[Int](alias, "COMPANY_ID")
+  val companyId = new NullableColumn[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {

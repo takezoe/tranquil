@@ -1,6 +1,6 @@
 package com.github.takezoe.sqlbuilder
 
-import java.sql.ResultSet
+import java.sql.{PreparedStatement, ResultSet}
 
 class Column[T](val alias: Option[String], val columnName: String)(implicit val binder: Binder[T]){
 
@@ -36,10 +36,6 @@ class Column[T](val alias: Option[String], val columnName: String)(implicit val 
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
-  def isNull(column: Column[T]): Condition = {
-    Condition(s"${fullName} IS NULL")
-  }
-
   def asc: Sort = {
     Sort(s"${fullName} ASC")
   }
@@ -54,6 +50,24 @@ class Column[T](val alias: Option[String], val columnName: String)(implicit val 
 
 //  def ~(column: Column[_]): Columns = Columns(Seq(this, column))
 
+}
+
+class NullableColumn[T](alias: Option[String], columnName: String)(implicit binder: Binder[T])
+  extends Column[T](alias, columnName)(binder){
+
+  def isNull(column: Column[T]): Condition = {
+    Condition(s"${fullName} IS NULL")
+  }
+
+  def asNull: UpdateColumn = {
+    UpdateColumn(Seq(this), Seq(Param(null, new Binder[Any]{
+      override val jdbcType: Int = binder.jdbcType
+      override def set(value: Any, stmt: PreparedStatement, i: Int): Unit = {
+        stmt.setNull(i + 1, binder.jdbcType)
+      }
+      override def get(name: String, rs: ResultSet): T = ???
+    })))
+  }
 }
 
 //case class Columns(columns: Seq[Column[_]]){

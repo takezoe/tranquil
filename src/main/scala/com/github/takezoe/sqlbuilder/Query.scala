@@ -67,6 +67,19 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
+//  def map[U, V](mapper: T => Columns[U, V]): Query[B, U, V] = {
+//    val columns = mapper(definitions)
+//    new Query[B, U, V](
+//      base        = base,
+//      definitions = columns.definitions,
+//      mapper      = columns.toModel _,
+//      filters     = filters,
+//      sorts       = sorts,
+//      innerJoins  = innerJoins,
+//      leftJoins   = leftJoins
+//    )
+//  }
+
   def selectStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("SELECT ")
@@ -78,9 +91,8 @@ class Query[B <: TableDef[_], T, R](
 
     sb.append(" FROM ")
     sb.append(base.tableName)
-
     sb.append(" ")
-    sb.append(base.alias)
+    sb.append(base.alias.get)
 
     innerJoins.foreach { case (query, condition) =>
       sb.append(" INNER JOIN ")
@@ -92,7 +104,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(")")
       }
       sb.append(" ")
-      sb.append(query.getBase.alias)
+      sb.append(query.getBase.alias.get)
       sb.append(" ON ")
       sb.append(condition.sql)
       bindParams ++= condition.parameters
@@ -108,7 +120,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(")")
       }
       sb.append(" ")
-      sb.append(query.getBase.alias)
+      sb.append(query.getBase.alias.get)
       sb.append(" ON ")
       sb.append(condition.sql)
     }

@@ -6,7 +6,7 @@ import scala.language.implicitConversions
 
 package object sqlbuilder {
 
-//  implicit def column2columns(column: Column[_]): Columns = Columns(Seq(column))
+//  implicit def column2columns[T](column: Column[T]): Columns[Column[T], T] = Columns[Column[T], T](column, Seq(column))
 
   object ~ {
     def unapply[A, B](t: (A, B)): Option[(A, B)] = Some(t)

@@ -4,8 +4,8 @@ import java.sql.{PreparedStatement, ResultSet}
 
 class Column[T](val alias: Option[String], val columnName: String)(implicit val binder: Binder[T]){
 
-  val fullName = alias.map { x => x + "." + alias } getOrElse columnName
-  val asName   = alias.map { x => x + "_" + alias } getOrElse columnName
+  val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
+  val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
 
   def get(rs: ResultSet): T = {
     binder.get(asName, rs)
@@ -48,8 +48,6 @@ class Column[T](val alias: Option[String], val columnName: String)(implicit val 
     UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
-//  def ~(column: Column[_]): Columns = Columns(Seq(this, column))
-
 }
 
 class NullableColumn[T](alias: Option[String], columnName: String)(implicit binder: Binder[T])
@@ -70,9 +68,23 @@ class NullableColumn[T](alias: Option[String], columnName: String)(implicit bind
   }
 }
 
-//case class Columns(columns: Seq[Column[_]]){
+//case class Columns[T, R](definitions: T, columns: Seq[Column[_]]){
 //
-//  def ~(column: Column[_]): Columns = Columns(columns :+ column)
+//  def ~[U](column: Column[U]): Columns[(T, Column[U]), (T, U)] =
+//    Columns[(T, Column[U]), (T, U)]((definitions, column), columns :+ column)
+//
+//  def toModel(rs: ResultSet): R = {
+//    def _get(head: Column[_], rest: Seq[Column[_]]): Any = {
+//      val result = head.get(rs)
+//      rest match {
+//        case Nil => result
+//        case head :: rest => (result, _get(head, rest))
+//      }
+//    }
+//    columns match {
+//      case head :: rest => _get(head, rest).asInstanceOf[R]
+//    }
+//  }
 //
 //}
 

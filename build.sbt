@@ -38,8 +38,8 @@ pomExtra := (
     </license>
   </licenses>
   <scm>
-    <url>https://github.com/takezoe/scala-sqlbuilder</url>
-    <connection>scm:git:https://github.com/takezoe/scala-sqlbuilder.git</connection>
+    <url>https://github.com/takezoe/trunquil</url>
+    <connection>scm:git:https://github.com/takezoe/trunquil.git</connection>
   </scm>
   <developers>
     <developer>

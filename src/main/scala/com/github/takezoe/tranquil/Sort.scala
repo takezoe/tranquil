@@ -1,4 +1,4 @@
-package com.github.takezoe.sqlbuilder
+package com.github.takezoe.tranquil
 
 // TODO Don't hold raw SQL
 case class Sort(sql: String) {

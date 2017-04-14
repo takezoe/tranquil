@@ -4,7 +4,7 @@ import java.sql.{JDBCType, PreparedStatement, ResultSet, Types}
 
 import scala.language.implicitConversions
 
-package object sqlbuilder {
+package object tranquil {
 
 //  implicit def column2columns[T](column: Column[T]): Columns[Column[T], T] = Columns[Column[T], T](column, Seq(column))
 
@@ -36,7 +36,7 @@ package object sqlbuilder {
     def get(name: String, rs: ResultSet): T
   }
 
-  private[sqlbuilder] def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
+  private[tranquil] def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
     try {
       f(resource)
     } finally {

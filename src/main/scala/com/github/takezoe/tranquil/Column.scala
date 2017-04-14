@@ -1,4 +1,4 @@
-package com.github.takezoe.sqlbuilder
+package com.github.takezoe.tranquil
 
 import java.sql.{PreparedStatement, ResultSet}
 

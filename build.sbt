@@ -1,4 +1,4 @@
-name := "scala-sqlbuilder"
+name := "tranquil"
 
 organization := "com.github.takezoe"
 

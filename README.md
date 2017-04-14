@@ -1,6 +1,6 @@
-# scala-sqlbuilder
+# Tranquil
 
-This is a experiment of type-safe SQL builder for Scala.
+Tranquil is a experiment of type-safe SQL builder for Scala.
 
 At first, ready table definitions like following:
 

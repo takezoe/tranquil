@@ -126,6 +126,18 @@ class Query[B <: TableDef[_], T, R](
     (sb.toString(), bindParams)
   }
 
+  // TODO It's possible to optimize the query for getting count.
+  def count(conn: Connection): Int = {
+    val (sql, bindParams) = selectStatement()
+    using(conn.prepareStatement(s"SELECT COUNT(*) AS COUNT FROM (${sql})")){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()){ rs =>
+        rs.next
+        rs.getInt("COUNT")
+      }
+    }
+  }
+
   def list(conn: Connection): Seq[R] = {
     val (sql, bindParams) = selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>

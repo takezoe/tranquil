@@ -9,7 +9,7 @@ import com.github.takezoe.sqlbuilder._
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
-class Users(val alias: String) extends TableDef[User] {
+class Users(val alias: Option[String]) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
@@ -22,15 +22,19 @@ class Users(val alias: String) extends TableDef[User] {
 }
 
 object Users {
+  def apply() = {
+    val users = new Users(None)
+    new SingleTableAction[Users](users)
+  }
   def apply(alias: String) = {
-    val users = new Users(alias)
+    val users = new Users(Some(alias))
     new Query[Users, Users, User](users, users, users.toModel _)
   }
 }
 
 case class Company(companyId: Int, companyName: String)
 
-class Companies(val alias: String) extends TableDef[Company] {
+class Companies(val alias: Option[String]) extends TableDef[Company] {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")
@@ -42,8 +46,12 @@ class Companies(val alias: String) extends TableDef[Company] {
 }
 
 object Companies {
+  def apply() = {
+    val companies = new Companies(None)
+    new SingleTableAction[Companies](companies)
+  }
   def apply(alias: String) = {
-    val companies = new Companies(alias)
+    val companies = new Companies(Some(alias))
     new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
   }
 }

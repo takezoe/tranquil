@@ -2,7 +2,7 @@ name := "tranquil"
 
 organization := "com.github.takezoe"
 
-version := "0.0.1"
+version := "0.0.2"
 
 scalaVersion := "2.12.1"
 
@@ -30,7 +30,7 @@ publishArtifact in Test := false
 pomIncludeRepository := { _ => false }
 
 pomExtra := (
-  <url>https://github.com/takezoe/scala-sqlbuilder</url>
+  <url>https://github.com/takezoe/tranquil</url>
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -39,7 +39,7 @@ pomExtra := (
   </licenses>
   <scm>
     <url>https://github.com/takezoe/trunquil</url>
-    <connection>scm:git:https://github.com/takezoe/trunquil.git</connection>
+    <connection>scm:git:https://github.com/takezoe/tranquil.git</connection>
   </scm>
   <developers>
     <developer>

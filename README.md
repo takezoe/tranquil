@@ -3,7 +3,7 @@
 Tranquil is a experiment of type-safe SQL builder for Scala.
 
 ```scala
-libraryDependencies += "com.github.takezoe" %% "tranquil" % "0.0.1"
+libraryDependencies += "com.github.takezoe" %% "tranquil" % "0.0.2"
 ```
 
 At first, ready table definitions like following:

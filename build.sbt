@@ -38,7 +38,7 @@ pomExtra := (
     </license>
   </licenses>
   <scm>
-    <url>https://github.com/takezoe/trunquil</url>
+    <url>https://github.com/takezoe/tranquil</url>
     <connection>scm:git:https://github.com/takezoe/tranquil.git</connection>
   </scm>
   <developers>

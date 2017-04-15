@@ -95,7 +95,10 @@ Also you can assemble insert, update and delete SQl in the same way.
 ```scala
 // INSERT
 Users()
-  .insert { u => (u.userId -> "takezoe") ~ (u.userName -> "Naoki Takezoe") }
+  .insert { u => 
+    (u.userId -> "takezoe") ~ 
+    (u.userName -> "Naoki Takezoe")
+  }
   .execute(conn)
 
 // UPDATE

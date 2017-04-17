@@ -2,6 +2,18 @@ package com.github.takezoe.tranquil
 
 import java.sql.{PreparedStatement, ResultSet}
 
+object Column {
+
+  def apply[T](alias: Option[String], columnName: String, nullable: Boolean = false)(implicit binder: Binder[T]): Column[T] = {
+    if(nullable){
+      new NullableColumn[T](alias, columnName)
+    } else {
+      new Column[T](alias, columnName)
+    }
+  }
+
+}
+
 class Column[T](val alias: Option[String], val columnName: String)(implicit val binder: Binder[T]){
 
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName

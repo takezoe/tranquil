@@ -15,9 +15,9 @@ case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users(val alias: Option[String]) extends TableDef[User] {
   val tableName = "USERS"
-  val userId    = new Column[String](alias, "USER_ID")
-  val userName  = new Column[String](alias, "USER_NAME")
-  val companyId = new NullableColumn[Int](alias, "COMPANY_ID")
+  val userId    = Column[String](alias, "USER_ID")
+  val userName  = Column[String](alias, "USER_NAME")
+  val companyId = Column[Int](alias, "COMPANY_ID", nullable = true)
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
@@ -40,8 +40,8 @@ case class Company(companyId: Int, companyName: String)
 
 class Companies(val alias: Option[String]) extends TableDef[Company] {
   val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "COMPANY_ID")
-  val companyName = new Column[String](alias, "COMPANY_NAME")
+  val companyId   = Column[Int](alias, "COMPANY_ID")
+  val companyName = Column[String](alias, "COMPANY_NAME")
   val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {

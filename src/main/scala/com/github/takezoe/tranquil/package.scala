@@ -65,20 +65,32 @@ package object tranquil {
 
   implicit val localDateTimeBinder = new Binder[LocalDateTime]{
     override val jdbcType: Int = Types.TIMESTAMP
-    override def set(value: LocalDateTime, stmt: PreparedStatement, i: Int): Unit = stmt.setTimestamp(i + 1, new Timestamp((value.toInstant(DefaultOffset).toEpochMilli)))
-    override def get(name: String, rs: ResultSet): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(rs.getTimestamp(name).getTime), DefaultOffset)
+    override def set(value: LocalDateTime, stmt: PreparedStatement, i: Int): Unit = stmt.setTimestamp(i + 1, new Timestamp(value.toInstant(DefaultOffset).toEpochMilli))
+    override def get(name: String, rs: ResultSet): LocalDateTime = Instant.ofEpochMilli(rs.getTimestamp(name).getTime).atOffset(DefaultOffset).toLocalDateTime
   }
+
+  implicit val localDateBinder = new Binder[LocalDate]{
+    override val jdbcType: Int = Types.DATE
+    override def set(value: LocalDate, stmt: PreparedStatement, i: Int): Unit = stmt.setDate(i + 1, new Date(value.atStartOfDay().toInstant(DefaultOffset).toEpochMilli))
+    override def get(name: String, rs: ResultSet): LocalDate = Instant.ofEpochMilli(rs.getTimestamp(name).getTime).atOffset(DefaultOffset).toLocalDate
+  }
+
+//  implicit val localTimeBinder = new Binder[LocalTime]{
+//    override val jdbcType: Int = Types.TIME
+//    override def set(value: LocalTime, stmt: PreparedStatement, i: Int): Unit = stmt.setTimestamp(i + 1, new Time(value.))
+//    override def get(name: String, rs: ResultSet): LocalTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(rs.getTimestamp(name).getTime), DefaultOffset)
+//  }
 
   implicit val zonedDateTimeBinder = new Binder[ZonedDateTime]{
     override val jdbcType: Int = Types.TIMESTAMP
     override def set(value: ZonedDateTime, stmt: PreparedStatement, i: Int): Unit = stmt.setTimestamp(i + 1, new Timestamp(value.toInstant.toEpochMilli))
-    override def get(name: String, rs: ResultSet): ZonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(rs.getTimestamp(name).getTime), DefaultZone)
+    override def get(name: String, rs: ResultSet): ZonedDateTime = Instant.ofEpochMilli(rs.getTimestamp(name).getTime).atZone(DefaultZone)
   }
 
   implicit val offsetDateTimeBinder = new Binder[OffsetDateTime]{
     override val jdbcType: Int = Types.TIMESTAMP
     override def set(value: OffsetDateTime, stmt: PreparedStatement, i: Int): Unit = stmt.setTimestamp(i + 1, new Timestamp(value.toInstant.toEpochMilli))
-    override def get(name: String, rs: ResultSet): OffsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(rs.getTimestamp(name).getTime), DefaultZone)
+    override def get(name: String, rs: ResultSet): OffsetDateTime = Instant.ofEpochMilli(rs.getTimestamp(name).getTime).atOffset(DefaultOffset)
   }
 
 

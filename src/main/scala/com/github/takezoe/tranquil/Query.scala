@@ -10,7 +10,9 @@ class Query[B <: TableDef[_], T, R](
   private val filters: Seq[Condition] = Nil,
   private val sorts: Seq[Sort] = Nil,
   private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
-  private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil
+  private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
+  private val limit: Option[Int] = None,
+  private val offset: Option[Int] = None
 ) {
 
   private def isTableQuery: Boolean = {
@@ -27,7 +29,9 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins :+ (table, on(definitions, table.base)),
-      leftJoins   = leftJoins
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = offset
     )
   }
 
@@ -39,7 +43,9 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, on(definitions, table.base))
+      leftJoins   = leftJoins :+ (table, on(definitions, table.base)),
+      limit       = limit,
+      offset      = offset
     )
   }
 
@@ -51,7 +57,9 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters :+ condition(definitions),
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = offset
     )
   }
 
@@ -63,7 +71,37 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts :+ orderBy(definitions),
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = offset
+    )
+  }
+
+  def take(limit: Int): Query[B, T, R] = {
+    new Query[B, T, R](
+      base        = base,
+      definitions = definitions,
+      mapper      = mapper,
+      filters     = filters,
+      sorts       = sorts,
+      innerJoins  = innerJoins,
+      leftJoins   = leftJoins,
+      limit       = Some(limit),
+      offset      = offset
+    )
+  }
+
+  def drop(offset: Int): Query[B, T, R] = {
+    new Query[B, T, R](
+      base        = base,
+      definitions = definitions,
+      mapper      = mapper,
+      filters     = filters,
+      sorts       = sorts,
+      innerJoins  = innerJoins,
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = Some(offset)
     )
   }
 
@@ -138,6 +176,13 @@ class Query[B <: TableDef[_], T, R](
     if(sorts.nonEmpty){
       sb.append(" ORDER BY ")
       sb.append(sorts.map(_.sql).mkString(", "))
+    }
+
+    limit.foreach { limit =>
+      sb.append(" LIMIT ").append(limit)
+    }
+    offset.foreach { offset =>
+      sb.append(" OFFSET ").append(offset)
     }
 
     (sb.toString(), bindParams)

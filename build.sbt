@@ -7,8 +7,8 @@ version := "0.0.3-SNAPSHOT"
 scalaVersion := "2.12.1"
 
 libraryDependencies ++= Seq(
-  "com.h2database" % "h2" % "1.4.193",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "com.h2database" % "h2" % "1.4.192" % "test"
 )
 
 publishMavenStyle := true

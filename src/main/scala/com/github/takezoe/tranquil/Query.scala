@@ -80,14 +80,19 @@ class Query[B <: TableDef[_], T, R](
 //    )
 //  }
 
-  def selectStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
+  def selectStatement(bindParams: BindParams = new BindParams(), select: Option[String] = None): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
-    val columns = base.columns.map(c => c.fullName + " AS " + c.asName) ++
-      innerJoins.flatMap { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) } ++
-      leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) }
-    sb.append(columns.mkString(", "))
+    select match {
+      case Some(x) => sb.append(x)
+      case None => {
+        val columns = base.columns.map(c => c.fullName + " AS " + c.asName) ++
+          innerJoins.flatMap { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) } ++
+          leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) }
+        sb.append(columns.mkString(", "))
+      }
+    }
 
     sb.append(" FROM ")
     sb.append(base.tableName)
@@ -140,8 +145,8 @@ class Query[B <: TableDef[_], T, R](
 
   // TODO It's possible to optimize the query for getting count.
   def count(conn: Connection): Int = {
-    val (sql, bindParams) = selectStatement()
-    using(conn.prepareStatement(s"SELECT COUNT(*) AS COUNT FROM (${sql})")){ stmt =>
+    val (sql: String, bindParams: BindParams) = selectStatement(select = Some("COUNT(*) AS COUNT"))
+    using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
         rs.next
@@ -164,7 +169,13 @@ class Query[B <: TableDef[_], T, R](
     }
   }
 
-  def single(conn: Connection): Option[R] = {
+  def first(conn: Connection): R = {
+    firstOption(conn).getOrElse {
+      throw new NoSuchElementException()
+    }
+  }
+
+  def firstOption(conn: Connection): Option[R] = {
     val (sql, bindParams) = selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }

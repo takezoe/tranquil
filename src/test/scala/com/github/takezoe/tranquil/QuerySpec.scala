@@ -40,7 +40,7 @@ class QuerySpec extends FunSuite {
 
       val result = Users("u")
         .filter(_.userName eq "takezoe")
-        .map { t => t.userName ~ t.companyId }
+        .map { t => t ~ t.companyId }
         .list(conn)
 
       println(result)

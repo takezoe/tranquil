@@ -7,10 +7,10 @@ import scala.collection.mutable.ListBuffer
 /**
  * Set of select columns and binder which retrieves values from these columns
  */
-case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
+case class SelectColumns[T](binder: ResultSet => T){
 
   def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
+    SelectColumns((rs: ResultSet) => (binder(rs), column.get(rs)))
   }
 
   def get(rs: ResultSet): T = binder(rs)

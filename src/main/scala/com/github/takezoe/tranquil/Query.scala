@@ -139,19 +139,6 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-//  def map[U, V](mapper: T => Columns[U, V]): Query[B, U, V] = {
-//    val columns = mapper(definitions)
-//    new Query[B, U, V](
-//      base        = base,
-//      definitions = columns.definitions,
-//      mapper      = columns.toModel _,
-//      filters     = filters,
-//      sorts       = sorts,
-//      innerJoins  = innerJoins,
-//      leftJoins   = leftJoins
-//    )
-//  }
-
   def selectStatement(bindParams: BindParams = new BindParams(), select: Option[String] = None): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("SELECT ")

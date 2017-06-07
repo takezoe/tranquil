@@ -1,8 +1,28 @@
 package com.github.takezoe.tranquil
 
 import java.sql.{Connection, ResultSet}
+
 import scala.collection.mutable.ListBuffer
 
+/**
+ * Set of select columns and binder which retrieves values from these columns
+ */
+case class SelectColumns[T](binder: ResultSet => T){
+
+  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
+    SelectColumns((rs: ResultSet) => (binder(rs), column.get(rs)))
+  }
+
+  def get(rs: ResultSet): T = binder(rs)
+
+}
+
+/**
+ *
+ * @tparam B the base table definition type of this query
+ * @tparam T the table type (with joined tables) of this query
+ * @tparam R the result type of this query
+ */
 class Query[B <: TableDef[_], T, R](
   private val base: B,
   private val definitions: T,
@@ -20,6 +40,20 @@ class Query[B <: TableDef[_], T, R](
   }
 
   private def getBase: TableDef[_] = base
+
+  def map[J](f: T => SelectColumns[J]): Query[B, T, J] = {
+    new Query[B, T, J](
+      base        = base,
+      definitions = definitions,
+      mapper      = (rs: ResultSet) => f(definitions).get(rs),
+      filters     = filters,
+      sorts       = sorts,
+      innerJoins  = innerJoins,
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = offset
+    )
+  }
 
   def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
     new Query[B, (T, J), (R, K)](

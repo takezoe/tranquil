@@ -21,7 +21,7 @@ class Users(val alias: Option[String]) extends TableDef[User] {
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
-    User(userId.get(rs), userName.get(rs), companyId.getOpt(rs))
+    User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
 }
 

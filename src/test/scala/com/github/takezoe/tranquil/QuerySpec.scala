@@ -38,8 +38,14 @@ class QuerySpec extends FunSuite {
       Users().insert(_.userName -> "takezoe").execute(conn)
       Users().insert(_.userName -> "n.takezoe").execute(conn)
 
-      val result = Users("u").filter(_.userName eq "takezoe").count(conn)
-      assert(result == 1)
+      val result = Users("u")
+        .filter(_.userName eq "takezoe")
+        .map { t => t ~ t.companyId }
+        .list(conn)
+
+      println(result)
+
+      assert(result.size == 1)
     } finally {
       conn.close()
     }
@@ -78,11 +84,11 @@ class Users(val alias: Option[String]) extends TableDef[User] {
   val tableName = "USERS"
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
-  val companyId = new NullableColumn[Int](alias, "COMPANY_ID")
+  val companyId = new OptionalColumn[Int](alias, "COMPANY_ID")
   val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
-    User(userId.get(rs), userName.get(rs), companyId.getOpt(rs))
+    User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
 }
 

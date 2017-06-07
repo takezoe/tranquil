@@ -2,37 +2,31 @@ package com.github.takezoe.tranquil
 
 import java.sql.{PreparedStatement, ResultSet}
 
-class Column[T](val alias: Option[String], val columnName: String)(implicit val binder: Binder[T]){
+/**
+ * Define basic functionality of the column model
+ */
+abstract class ColumnBase[T, S](val alias: Option[String], val columnName: String)(implicit val binder: ColumnBinder[S]){
 
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
   val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
 
-  def get(rs: ResultSet): T = {
+  def get(rs: ResultSet): S = {
     binder.get(asName, rs)
   }
 
-  def getOpt(rs: ResultSet): Option[T] = {
-    if(rs.getObject(asName) == null){
-      None
-    } else {
-      Some(binder.get(asName, rs))
-    }
-  }
-
-
-  def eq(column: Column[T]): Condition = {
+  def eq(column: ColumnBase[T, _]): Condition = {
     Condition(s"${fullName} = ${column.fullName}")
   }
 
-  def eq(value: T)(implicit binder: Binder[T]): Condition = {
+  def eq(value: T)(implicit binder: ColumnBinder[T]): Condition = {
     Condition(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
-  def ne(column: Column[T]): Condition = {
+  def ne(column: ColumnBase[T, _]): Condition = {
     Condition(s"${fullName} <> ${column.fullName}")
   }
 
-  def ne(value: T)(implicit binder: Binder[T]): Condition = {
+  def ne(value: T)(implicit binder: ColumnBinder[T]): Condition = {
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
@@ -44,21 +38,31 @@ class Column[T](val alias: Option[String], val columnName: String)(implicit val 
     Sort(s"${fullName} DESC")
   }
 
-  def -> (value: T)(implicit binder: Binder[T]): UpdateColumn = {
+  def -> (value: T)(implicit binder: ColumnBinder[T]): UpdateColumn = {
     UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
 }
 
-class NullableColumn[T](alias: Option[String], columnName: String)(implicit binder: Binder[T])
-  extends Column[T](alias, columnName)(binder){
+/**
+ * Represent a non-null column
+ */
+class Column[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
+  extends ColumnBase[T, T](alias, columnName)(binder)
 
-  def isNull(column: Column[T]): Condition = {
+
+/**
+ * Represent a nullable column
+ */
+class OptionalColumn[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
+  extends ColumnBase[T, Option[T]](alias, columnName)(new OptionalColumnBinder[T](binder)){
+
+  def isNull(column: ColumnBase[T, _]): Condition = {
     Condition(s"${fullName} IS NULL")
   }
 
   def asNull: UpdateColumn = {
-    UpdateColumn(Seq(this), Seq(Param(null, new Binder[Any]{
+    UpdateColumn(Seq(this), Seq(Param(null, new ColumnBinder[Any]{
       override val jdbcType: Int = binder.jdbcType
       override def set(value: Any, stmt: PreparedStatement, i: Int): Unit = {
         stmt.setNull(i + 1, binder.jdbcType)
@@ -68,23 +72,24 @@ class NullableColumn[T](alias: Option[String], columnName: String)(implicit bind
   }
 }
 
-//case class Columns[T, R](definitions: T, columns: Seq[Column[_]]){
-//
-//  def ~[U](column: Column[U]): Columns[(T, Column[U]), (T, U)] =
-//    Columns[(T, Column[U]), (T, U)]((definitions, column), columns :+ column)
-//
-//  def toModel(rs: ResultSet): R = {
-//    def _get(head: Column[_], rest: Seq[Column[_]]): Any = {
-//      val result = head.get(rs)
-//      rest match {
-//        case Nil => result
-//        case head :: rest => (result, _get(head, rest))
-//      }
-//    }
-//    columns match {
-//      case head :: rest => _get(head, rest).asInstanceOf[R]
-//    }
-//  }
-//
-//}
+/**
+ * A [[ColumnBinder]] implementation for [[OptionalColumn]] by wrapping a primitive binder.
+ */
+private class OptionalColumnBinder[T](binder: ColumnBinder[T]) extends ColumnBinder[Option[T]] {
+  override val jdbcType: Int = binder.jdbcType
 
+  override def set(value: Option[T], stmt: PreparedStatement, i: Int): Unit = {
+    value match {
+      case Some(x) => binder.set(x, stmt, i + 1)
+      case None => stmt.setNull(i + 1, binder.jdbcType)
+    }
+  }
+
+  override def get(name: String, rs: ResultSet): Option[T] = {
+    if(rs.getObject(name) == null){
+      None
+    } else {
+      Some(binder.get(name, rs))
+    }
+  }
+}

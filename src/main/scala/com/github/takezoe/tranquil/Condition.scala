@@ -4,7 +4,7 @@ import java.sql.PreparedStatement
 
 // TODO Don't hold raw SQL
 /**
- * Filter condition in select statement
+ * Set of filter condition and its parameters in select statement
  */
 case class Condition(sql: String, parameters: Seq[Param[_]] = Nil){
 
@@ -18,9 +18,9 @@ case class Condition(sql: String, parameters: Seq[Param[_]] = Nil){
 
 // TODO Don't hold raw SQL
 /**
- * Updating parameters in update statement
+ * Set of columns and parameters to be updated in update statement
  */
-case class UpdateColumn(columns: Seq[Column[_]], parameters: Seq[Param[_]]){
+case class UpdateColumn(columns: Seq[ColumnBase[_, _]], parameters: Seq[Param[_]]){
 
   def ~ (updateColumn: UpdateColumn): UpdateColumn = {
     UpdateColumn(columns ++ updateColumn.columns, parameters ++ updateColumn.parameters)
@@ -28,6 +28,6 @@ case class UpdateColumn(columns: Seq[Column[_]], parameters: Seq[Param[_]]){
 
 }
 
-case class Param[T](value: T, binder: Binder[T]){
+case class Param[T](value: T, binder: ColumnBinder[T]){
   def set(stmt: PreparedStatement, i: Int): Unit = binder.set(value, stmt, i)
 }

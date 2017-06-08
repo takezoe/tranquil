@@ -80,6 +80,20 @@ class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[
   }
 }
 
+case class GroupingColumn[T](column: ColumnBase[_, T], function: Option[String] = None)
+
+case class GroupingColumns[T](columns: Seq[GroupingColumn[_]], binder: ResultSet => T){
+
+  def ~ [S](column: GroupingColumn[S]): GroupingColumns[(T, S)] = {
+    GroupingColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.column.get(rs)))
+  }
+
+  def get(rs: ResultSet): T = binder(rs)
+
+  lazy val groupByColumns = columns.filter(_.function.isEmpty)
+
+}
+
 /**
  *
  * @tparam B the base table definition type of this query
@@ -96,7 +110,8 @@ class Query[B <: TableDef[_], T, R](
   private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val limit: Option[Int] = None,
-  private val offset: Option[Int] = None
+  private val offset: Option[Int] = None,
+  private val groupBy: Option[GroupingColumns[R]] = None
 ) extends RunnableQuery[R] {
 
   def this(base: B) = this(
@@ -113,6 +128,25 @@ class Query[B <: TableDef[_], T, R](
   }
 
   private def getBase: TableDef[_] = base
+
+  def groupBy[J](f: T => GroupingColumns[J]): MappedQuery[J] = {
+    val groupBy = f(definitions)
+
+    new MappedQuery(new Query[B, T, J](
+      base        = base,
+      columns     = groupBy.columns.map(_.column), // TODO is it right?
+      definitions = definitions,
+      mapper      = (rs: ResultSet) => groupBy.get(rs),
+      filters     = filters,
+      sorts       = sorts,
+      innerJoins  = innerJoins,
+      leftJoins   = leftJoins,
+      limit       = limit,
+      offset      = offset,
+      groupBy     = Some(groupBy)
+    ))
+
+  }
 
   def map[J](f: T => SelectColumns[J]): MappedQuery[J] = {
     val select = f(definitions)
@@ -276,6 +310,12 @@ class Query[B <: TableDef[_], T, R](
       sb.append(filters.map(_.sql).mkString(" AND "))
       bindParams ++= filters.flatMap(_.parameters)
     }
+    groupBy.foreach { groupBy =>
+      sb.append(" GROUP BY ")
+      sb.append(groupBy.groupByColumns.map(_.column.fullName).mkString(", "))
+
+    }
+
     if(sorts.nonEmpty){
       sb.append(" ORDER BY ")
       sb.append(sorts.map(_.sql).mkString(", "))

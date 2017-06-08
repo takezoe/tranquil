@@ -42,6 +42,29 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
+  def count: GroupingColumn[Long] = {
+    val originalFullName = fullName
+    val column = new Column[Long](alias, columnName) {
+      override val fullName = s"COUNT(${originalFullName})"
+    }
+    GroupingColumn[Long](column, Some("no meaning"))
+  }
+
+  def max: GroupingColumn[Long] = {
+    val originalFullName = fullName
+    val column = new Column[Long](alias, columnName) {
+      override val fullName = s"MAX(${originalFullName})"
+    }
+    GroupingColumn[Long](column, Some("no meaning"))
+  }
+
+  def min: GroupingColumn[Long] = {
+    val originalFullName = fullName
+    val column = new Column[Long](alias, columnName) {
+      override val fullName = s"MIN(${originalFullName})"
+    }
+    GroupingColumn[Long](column, Some("no meaning"))
+  }
 }
 
 /**

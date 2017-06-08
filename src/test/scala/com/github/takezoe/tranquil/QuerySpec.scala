@@ -51,6 +51,25 @@ class QuerySpec extends FunSuite {
     }
   }
 
+  test("groupBy"){
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    try {
+      createTables(conn)
+      Companies().insert(_.companyName -> "BizReach").execute(conn)
+      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
+      Users().insert(u => (u.userName -> "employee3")).execute(conn)
+
+      val results = Users("u")
+        .groupBy { t => t.companyId ~ t.userId.count }
+        .list(conn)
+
+      assert(results == Seq((None, 1), (Some(1), 2)))
+    } finally {
+      conn.close()
+    }
+  }
+
   private def createTables(conn: Connection) = {
     executeSql(conn,
       """CREATE TABLE COMPANIES (

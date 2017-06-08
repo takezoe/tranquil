@@ -99,6 +99,13 @@ class Query[B <: TableDef[_], T, R](
   private val offset: Option[Int] = None
 ) extends RunnableQuery[R] {
 
+  def this(base: B) = this(
+    base        = base,
+    columns     = base.columns,
+    definitions = base.asInstanceOf[T],
+    mapper      = (base.toModel _).asInstanceOf[ResultSet => R]
+  )
+
   override protected val query = this
 
   private def isTableQuery: Boolean = {

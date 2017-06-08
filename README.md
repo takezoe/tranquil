@@ -32,7 +32,7 @@ object Users {
   }
   def apply(alias: String) = {
     val users = new Users(Some(alias))
-    new Query[Users, Users, User](users, users, users.toModel _)
+    new Query[Users, Users, User](users, users.toModel _)
   }
 }
 
@@ -56,7 +56,7 @@ object Companies {
   }
   def apply(alias: String) = {
     val companies = new Companies(Some(alias))
-    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
+    new Query[Companies, Companies, Company](companies, companies.toModel _)
   }
 }
 ```

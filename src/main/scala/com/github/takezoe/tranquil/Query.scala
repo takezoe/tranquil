@@ -4,18 +4,18 @@ import java.sql.{Connection, ResultSet}
 
 import scala.collection.mutable.ListBuffer
 
-/**
- * Set of select columns and binder which retrieves values from these columns
- */
-case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
-
-  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
-  }
-
-  def get(rs: ResultSet): T = binder(rs)
-
-}
+///**
+// * Set of select columns and binder which retrieves values from these columns
+// */
+//case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
+//
+//  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
+//    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
+//  }
+//
+//  def get(rs: ResultSet): T = binder(rs)
+//
+//}
 
 /**
  * Define execution methods for Query.
@@ -78,20 +78,6 @@ class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[
   def selectStatement(): (String, BindParams) = {
     query.selectStatement()
   }
-}
-
-case class GroupingColumn[T](column: ColumnBase[_, T], function: Option[String] = None)
-
-case class GroupingColumns[T](columns: Seq[GroupingColumn[_]], binder: ResultSet => T){
-
-  def ~ [S](column: GroupingColumn[S]): GroupingColumns[(T, S)] = {
-    GroupingColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.column.get(rs)))
-  }
-
-  def get(rs: ResultSet): T = binder(rs)
-
-  lazy val groupByColumns = columns.filter(_.function.isEmpty)
-
 }
 
 /**

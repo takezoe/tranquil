@@ -18,6 +18,65 @@ case class SelectColumns[T](binder: ResultSet => T){
 }
 
 /**
+ * Define execution methods for Query.
+ */
+trait RunnableQuery[R] {
+  protected val query: Query[_, _, R]
+
+  // TODO It's possible to optimize the query for getting count.
+  def count(conn: Connection): Int = {
+    val (sql: String, bindParams: BindParams) = query.selectStatement(select = Some("COUNT(*) AS COUNT"))
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()){ rs =>
+        rs.next
+        rs.getInt("COUNT")
+      }
+    }
+  }
+
+  def list(conn: Connection): Seq[R] = {
+    val (sql, bindParams) = query.selectStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()){ rs =>
+        val list = new ListBuffer[R]
+        while(rs.next){
+          list += query.mapper(rs)
+        }
+        list.toSeq
+      }
+    }
+  }
+
+  def first(conn: Connection): R = {
+    firstOption(conn).getOrElse {
+      throw new NoSuchElementException()
+    }
+  }
+
+  def firstOption(conn: Connection): Option[R] = {
+    val (sql, bindParams) = query.selectStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      using(stmt.executeQuery()) { rs =>
+        if (rs.next) {
+          Some(query.mapper(rs))
+        } else {
+          None
+        }
+      }
+    }
+  }
+
+}
+
+/**
+ * Represent a mapped query which is not accept additional operation except execution.
+ */
+class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[R]
+
+/**
  *
  * @tparam B the base table definition type of this query
  * @tparam T the table type (with joined tables) of this query
@@ -26,14 +85,16 @@ case class SelectColumns[T](binder: ResultSet => T){
 class Query[B <: TableDef[_], T, R](
   private val base: B,
   private val definitions: T,
-  private val mapper: ResultSet => R,
+  private[tranquil] val mapper: ResultSet => R,
   private val filters: Seq[Condition] = Nil,
   private val sorts: Seq[Sort] = Nil,
   private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val limit: Option[Int] = None,
   private val offset: Option[Int] = None
-) {
+) extends RunnableQuery[R] {
+
+  override protected val query = this
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
@@ -41,8 +102,8 @@ class Query[B <: TableDef[_], T, R](
 
   private def getBase: TableDef[_] = base
 
-  def map[J](f: T => SelectColumns[J]): Query[B, T, J] = {
-    new Query[B, T, J](
+  def map[J](f: T => SelectColumns[J]): MappedQuery[J] = {
+    new MappedQuery(new Query[B, T, J](
       base        = base,
       definitions = definitions,
       mapper      = (rs: ResultSet) => f(definitions).get(rs),
@@ -52,7 +113,7 @@ class Query[B <: TableDef[_], T, R](
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
-    )
+    ))
   }
 
   def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
@@ -207,52 +268,6 @@ class Query[B <: TableDef[_], T, R](
     }
 
     (sb.toString(), bindParams)
-  }
-
-  // TODO It's possible to optimize the query for getting count.
-  def count(conn: Connection): Int = {
-    val (sql: String, bindParams: BindParams) = selectStatement(select = Some("COUNT(*) AS COUNT"))
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      using(stmt.executeQuery()){ rs =>
-        rs.next
-        rs.getInt("COUNT")
-      }
-    }
-  }
-
-  def list(conn: Connection): Seq[R] = {
-    val (sql, bindParams) = selectStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      using(stmt.executeQuery()){ rs =>
-        val list = new ListBuffer[R]
-        while(rs.next){
-          list += mapper(rs)
-        }
-        list.toSeq
-      }
-    }
-  }
-
-  def first(conn: Connection): R = {
-    firstOption(conn).getOrElse {
-      throw new NoSuchElementException()
-    }
-  }
-
-  def firstOption(conn: Connection): Option[R] = {
-    val (sql, bindParams) = selectStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      using(stmt.executeQuery()) { rs =>
-        if (rs.next) {
-          Some(mapper(rs))
-        } else {
-          None
-        }
-      }
-    }
   }
 
 }

@@ -38,14 +38,14 @@ class QuerySpec extends FunSuite {
       Users().insert(_.userName -> "takezoe").execute(conn)
       Users().insert(_.userName -> "n.takezoe").execute(conn)
 
-      val result = Users("u")
+      val query = Users("u")
         .filter(_.userName eq "takezoe")
         .map { t => t ~ t.companyId }
-        .list(conn)
 
-      println(result)
+      val result = query.list(conn)
 
       assert(result.size == 1)
+      assert(result == Seq((User("1", "takezoe", None), None)))
     } finally {
       conn.close()
     }
@@ -99,7 +99,7 @@ object Users {
   }
   def apply(alias: String) = {
     val users = new Users(Some(alias))
-    new Query[Users, Users, User](users, users, users.toModel _)
+    new Query[Users, Users, User](users, users.columns, users, users.toModel _)
   }
 }
 
@@ -123,6 +123,6 @@ object Companies {
   }
   def apply(alias: String) = {
     val companies = new Companies(Some(alias))
-    new Query[Companies, Companies, Company](companies, companies, companies.toModel _)
+    new Query[Companies, Companies, Company](companies, companies.columns, companies, companies.toModel _)
   }
 }

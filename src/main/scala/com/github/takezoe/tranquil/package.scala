@@ -109,8 +109,8 @@ package object tranquil {
     def get(name: String, rs: ResultSet): T
   }
 
-  implicit def toSelectColumn[T](column: ColumnBase[_, T]): SelectColumns[T] = SelectColumns(column.get)
-  implicit def toSelectColumn[T](table: TableDef[T]): SelectColumns[T] = SelectColumns(table.toModel)
+  implicit def toSelectColumn[T](column: ColumnBase[_, T]): SelectColumns[T] = SelectColumns(Seq(column), column.get)
+  implicit def toSelectColumn[T](table: TableDef[T]): SelectColumns[T] = SelectColumns(table.columns, table.toModel)
 
   private[tranquil] def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
     try {

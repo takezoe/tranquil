@@ -7,10 +7,10 @@ import scala.collection.mutable.ListBuffer
 /**
  * Set of select columns and binder which retrieves values from these columns
  */
-case class SelectColumns[T](binder: ResultSet => T){
+case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
 
   def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-    SelectColumns((rs: ResultSet) => (binder(rs), column.get(rs)))
+    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
   }
 
   def get(rs: ResultSet): T = binder(rs)
@@ -74,7 +74,11 @@ trait RunnableQuery[R] {
 /**
  * Represent a mapped query which is not accept additional operation except execution.
  */
-class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[R]
+class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[R] {
+  def selectStatement(): (String, BindParams) = {
+    query.selectStatement()
+  }
+}
 
 /**
  *
@@ -84,6 +88,7 @@ class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[
  */
 class Query[B <: TableDef[_], T, R](
   private val base: B,
+  private val columns: Seq[ColumnBase[_, _]],
   private val definitions: T,
   private[tranquil] val mapper: ResultSet => R,
   private val filters: Seq[Condition] = Nil,
@@ -103,10 +108,13 @@ class Query[B <: TableDef[_], T, R](
   private def getBase: TableDef[_] = base
 
   def map[J](f: T => SelectColumns[J]): MappedQuery[J] = {
+    val select = f(definitions)
+
     new MappedQuery(new Query[B, T, J](
       base        = base,
+      columns     = select.columns,
       definitions = definitions,
-      mapper      = (rs: ResultSet) => f(definitions).get(rs),
+      mapper      = (rs: ResultSet) => select.get(rs),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -119,6 +127,7 @@ class Query[B <: TableDef[_], T, R](
   def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
     new Query[B, (T, J), (R, K)](
       base        = base,
+      columns     = columns,
       definitions = (definitions, table.base),
       mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
@@ -133,6 +142,7 @@ class Query[B <: TableDef[_], T, R](
   def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, Option[K])] = {
     new Query[B, (T, J), (R, Option[K])](
       base        = base,
+      columns     = columns,
       definitions = (definitions, table.base),
       mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(table.base.columns.head.asName) == null) None else Some(table.base.toModel(rs))),
       filters     = filters,
@@ -147,6 +157,7 @@ class Query[B <: TableDef[_], T, R](
   def filter(condition: T => Condition): Query[B, T, R] = {
     new Query[B, T, R](
       base        = base,
+      columns     = columns,
       definitions = definitions,
       mapper      = mapper,
       filters     = filters :+ condition(definitions),
@@ -161,6 +172,7 @@ class Query[B <: TableDef[_], T, R](
   def sortBy(orderBy: T => Sort): Query[B, T, R] = {
     new Query[B, T, R](
       base        = base,
+      columns     = columns,
       definitions = definitions,
       mapper      = mapper,
       filters     = filters,
@@ -175,6 +187,7 @@ class Query[B <: TableDef[_], T, R](
   def take(limit: Int): Query[B, T, R] = {
     new Query[B, T, R](
       base        = base,
+      columns     = columns,
       definitions = definitions,
       mapper      = mapper,
       filters     = filters,
@@ -189,6 +202,7 @@ class Query[B <: TableDef[_], T, R](
   def drop(offset: Int): Query[B, T, R] = {
     new Query[B, T, R](
       base        = base,
+      columns     = columns,
       definitions = definitions,
       mapper      = mapper,
       filters     = filters,
@@ -207,10 +221,10 @@ class Query[B <: TableDef[_], T, R](
     select match {
       case Some(x) => sb.append(x)
       case None => {
-        val columns = base.columns.map(c => c.fullName + " AS " + c.asName) ++
+        val selectColumns = columns.map(c => c.fullName + " AS " + c.asName) ++
           innerJoins.flatMap { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) } ++
           leftJoins.flatMap  { case (query, _) => query.getBase.columns.map(c => c.fullName + " AS " + c.asName) }
-        sb.append(columns.mkString(", "))
+        sb.append(selectColumns.mkString(", "))
       }
     }
 

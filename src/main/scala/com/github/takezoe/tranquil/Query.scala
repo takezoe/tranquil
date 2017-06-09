@@ -5,27 +5,14 @@ import java.sql.{Connection, ResultSet}
 import scala.collection.mutable.ListBuffer
 
 /**
- * Set of select columns and binder which retrieves values from these columns
- */
-case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
-
-  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
-  }
-
-  def get(rs: ResultSet): T = binder(rs)
-
-}
-
-/**
  * Define execution methods for Query.
  */
 trait RunnableQuery[R] {
-  protected val query: Query[_, _, R]
+  protected val underlying: Query[_, _, R]
 
   // TODO It's possible to optimize the query for getting count.
   def count(conn: Connection): Int = {
-    val (sql: String, bindParams: BindParams) = query.selectStatement(select = Some("COUNT(*) AS COUNT"))
+    val (sql: String, bindParams: BindParams) = underlying.selectStatement(select = Some("COUNT(*) AS COUNT"))
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
@@ -36,13 +23,13 @@ trait RunnableQuery[R] {
   }
 
   def list(conn: Connection): Seq[R] = {
-    val (sql, bindParams) = query.selectStatement()
+    val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
         val list = new ListBuffer[R]
         while(rs.next){
-          list += query.mapper(rs)
+          list += underlying.mapper(rs)
         }
         list.toSeq
       }
@@ -56,12 +43,12 @@ trait RunnableQuery[R] {
   }
 
   def firstOption(conn: Connection): Option[R] = {
-    val (sql, bindParams) = query.selectStatement()
+    val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()) { rs =>
         if (rs.next) {
-          Some(query.mapper(rs))
+          Some(underlying.mapper(rs))
         } else {
           None
         }
@@ -74,10 +61,32 @@ trait RunnableQuery[R] {
 /**
  * Represent a mapped query which is not accept additional operation except execution.
  */
-class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[R] {
+class MappedQuery[R](protected val underlying: Query[_, _, R]) extends RunnableQuery[R] {
   def selectStatement(): (String, BindParams) = {
-    query.selectStatement()
+    underlying.selectStatement()
   }
+}
+
+class GroupingQuery[T, R](
+  protected val underlying: Query[_, _, R],
+  private val definitions: T
+) extends RunnableQuery[R] {
+
+  def selectStatement(): (String, BindParams) = {
+    underlying.selectStatement()
+    // TODO generate HAVING query here? or implement in Query?
+  }
+
+  def filter(condition: T => Condition): GroupingQuery[T, R] = {
+    new GroupingQuery(
+      underlying  = underlying.groupBy { _ =>
+        val grouping = underlying.grouping.get.asInstanceOf[GroupingColumns[T, R]]
+        grouping.copy(having = grouping.having :+ condition(definitions))
+      }.underlying,
+      definitions = definitions
+    )
+  }
+
 }
 
 /**
@@ -96,7 +105,8 @@ class Query[B <: TableDef[_], T, R](
   private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val limit: Option[Int] = None,
-  private val offset: Option[Int] = None
+  private val offset: Option[Int] = None,
+  private[tranquil] val grouping: Option[GroupingColumns[_, R]] = None
 ) extends RunnableQuery[R] {
 
   def this(base: B) = this(
@@ -106,7 +116,7 @@ class Query[B <: TableDef[_], T, R](
     mapper      = (base.toModel _).asInstanceOf[ResultSet => R]
   )
 
-  override protected val query = this
+  override protected val underlying = this
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
@@ -114,10 +124,31 @@ class Query[B <: TableDef[_], T, R](
 
   private def getBase: TableDef[_] = base
 
-  def map[J](f: T => SelectColumns[J]): MappedQuery[J] = {
+  def groupBy[T2, R2](f: T => GroupingColumns[T2, R2]): GroupingQuery[T2, R2] = {
+    val grouping = f(definitions)
+
+    new GroupingQuery[T2, R2](
+      underlying = new Query[B, T, R2](
+        base        = base,
+        columns     = grouping.columns.map(_.column),
+        definitions = definitions,
+        mapper      = (rs: ResultSet) => grouping.get(rs),
+        filters     = filters,
+        sorts       = sorts,
+        innerJoins  = innerJoins,
+        leftJoins   = leftJoins,
+        limit       = limit,
+        offset      = offset,
+        grouping    = Some(grouping)
+      ),
+      definitions = grouping.definition
+    )
+  }
+
+  def map[R2](f: T => SelectColumns[R2]): MappedQuery[R2] = {
     val select = f(definitions)
 
-    new MappedQuery(new Query[B, T, J](
+    new MappedQuery(new Query[B, T, R2](
       base        = base,
       columns     = select.columns,
       definitions = definitions,
@@ -131,8 +162,8 @@ class Query[B <: TableDef[_], T, R](
     ))
   }
 
-  def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
-    new Query[B, (T, J), (R, K)](
+  def innerJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, T2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+    new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
       definitions = (definitions, table.base),
@@ -146,8 +177,8 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, Option[K])] = {
-    new Query[B, (T, J), (R, Option[K])](
+  def leftJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+    new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,
       definitions = (definitions, table.base),
@@ -276,6 +307,17 @@ class Query[B <: TableDef[_], T, R](
       sb.append(filters.map(_.sql).mkString(" AND "))
       bindParams ++= filters.flatMap(_.parameters)
     }
+
+    grouping.foreach { grouping =>
+      sb.append(" GROUP BY ")
+      sb.append(grouping.groupByColumns.map(_.column.fullName).mkString(", "))
+      if(grouping.having.nonEmpty){
+        sb.append(" HAVING ")
+        sb.append(grouping.having.map(_.sql).mkString(" AND "))
+        bindParams ++= grouping.having.flatMap(_.parameters)
+      }
+    }
+
     if(sorts.nonEmpty){
       sb.append(" ORDER BY ")
       sb.append(sorts.map(_.sql).mkString(", "))

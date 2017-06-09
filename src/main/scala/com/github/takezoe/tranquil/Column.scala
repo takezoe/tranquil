@@ -5,7 +5,8 @@ import java.sql.{PreparedStatement, ResultSet}
 /**
  * Define basic functionality of the column model
  */
-abstract class ColumnBase[T, S](val alias: Option[String], val columnName: String)(implicit val binder: ColumnBinder[S]){
+abstract class ColumnBase[T, S](val alias: Option[String], val columnName: String)
+                               (implicit val binder: ColumnBinder[S]){
 
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
   val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
@@ -30,6 +31,38 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
+  def gt(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} > ${column.fullName}")
+  }
+
+  def gt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} > ?", Seq(Param(value, binder)))
+  }
+
+  def ge(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} >= ${column.fullName}")
+  }
+
+  def ge(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} >= ?", Seq(Param(value, binder)))
+  }
+
+  def lt(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} < ${column.fullName}")
+  }
+
+  def lt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} < ?", Seq(Param(value, binder)))
+  }
+
+  def le(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} <= ${column.fullName}")
+  }
+
+  def le(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} <= ?", Seq(Param(value, binder)))
+  }
+
   def asc: Sort = {
     Sort(s"${fullName} ASC")
   }
@@ -42,6 +75,17 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
+  def count: GroupingColumn[Long, Long] = {
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"COUNT(${fullName})"), false)
+  }
+
+  def max: GroupingColumn[Long, Long] = {
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MAX(${fullName})"), false)
+  }
+
+  def min: GroupingColumn[Long, Long] = {
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})"), false)
+  }
 }
 
 /**
@@ -73,6 +117,14 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
 }
 
 /**
+ * Represent function call
+ */
+class FunctionColumn[T](alias: Option[String], columnName: String, select: String)
+                       (implicit binder: ColumnBinder[T]) extends Column[T](alias, columnName)(binder){
+  override val fullName = select
+}
+
+/**
  * A [[ColumnBinder]] implementation for [[OptionalColumn]] by wrapping a primitive binder.
  */
 private class OptionalColumnBinder[T](binder: ColumnBinder[T]) extends ColumnBinder[Option[T]] {
@@ -92,4 +144,47 @@ private class OptionalColumnBinder[T](binder: ColumnBinder[T]) extends ColumnBin
       Some(binder.get(name, rs))
     }
   }
+}
+
+/**
+ * Set of select columns and binder which retrieves values from these columns
+ */
+case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
+
+  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
+    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
+  }
+
+  def get(rs: ResultSet): T = binder(rs)
+
+}
+
+/**
+ * Represent a columns in GROUP BY query.
+ *
+ * If groupBy is true, this column means used as a grouping key.
+ * Otherwise, this column means aggregate function call.
+ */
+case class GroupingColumn[S, T](column: ColumnBase[S, T], groupBy: Boolean = true)
+
+/**
+ * Set of grouping columns.
+ */
+case class GroupingColumns[T, R](
+  definition: T, columns: Seq[GroupingColumn[_, _]],
+  binder: ResultSet => R,
+  having: Seq[Condition] = Nil
+){
+  def ~ [S, K](column: GroupingColumn[K, S]): GroupingColumns[(T, ColumnBase[K, S]), (R, S)] = {
+    GroupingColumns(
+      (definition, column.column),
+      columns :+ column,
+      (rs: ResultSet) => (binder(rs), column.column.get(rs))
+    )
+  }
+
+  def get(rs: ResultSet): R = binder(rs)
+
+  lazy val groupByColumns = columns.filter(_.groupBy)
+
 }

@@ -4,28 +4,15 @@ import java.sql.{Connection, ResultSet}
 
 import scala.collection.mutable.ListBuffer
 
-///**
-// * Set of select columns and binder which retrieves values from these columns
-// */
-//case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
-//
-//  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-//    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
-//  }
-//
-//  def get(rs: ResultSet): T = binder(rs)
-//
-//}
-
 /**
  * Define execution methods for Query.
  */
 trait RunnableQuery[R] {
-  protected val query: Query[_, _, R]
+  protected val underlying: Query[_, _, R]
 
   // TODO It's possible to optimize the query for getting count.
   def count(conn: Connection): Int = {
-    val (sql: String, bindParams: BindParams) = query.selectStatement(select = Some("COUNT(*) AS COUNT"))
+    val (sql: String, bindParams: BindParams) = underlying.selectStatement(select = Some("COUNT(*) AS COUNT"))
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
@@ -36,13 +23,13 @@ trait RunnableQuery[R] {
   }
 
   def list(conn: Connection): Seq[R] = {
-    val (sql, bindParams) = query.selectStatement()
+    val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
         val list = new ListBuffer[R]
         while(rs.next){
-          list += query.mapper(rs)
+          list += underlying.mapper(rs)
         }
         list.toSeq
       }
@@ -56,12 +43,12 @@ trait RunnableQuery[R] {
   }
 
   def firstOption(conn: Connection): Option[R] = {
-    val (sql, bindParams) = query.selectStatement()
+    val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()) { rs =>
         if (rs.next) {
-          Some(query.mapper(rs))
+          Some(underlying.mapper(rs))
         } else {
           None
         }
@@ -74,9 +61,9 @@ trait RunnableQuery[R] {
 /**
  * Represent a mapped query which is not accept additional operation except execution.
  */
-class MappedQuery[R](protected val query: Query[_, _, R]) extends RunnableQuery[R] {
+class MappedQuery[R](protected val underlying: Query[_, _, R]) extends RunnableQuery[R] {
   def selectStatement(): (String, BindParams) = {
-    query.selectStatement()
+    underlying.selectStatement()
   }
 }
 
@@ -107,7 +94,7 @@ class Query[B <: TableDef[_], T, R](
     mapper      = (base.toModel _).asInstanceOf[ResultSet => R]
   )
 
-  override protected val query = this
+  override protected val underlying = this
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
@@ -120,7 +107,7 @@ class Query[B <: TableDef[_], T, R](
 
     new MappedQuery(new Query[B, T, J](
       base        = base,
-      columns     = groupBy.columns.map(_.column), // TODO is it right?
+      columns     = groupBy.columns.map(_.column),
       definitions = definitions,
       mapper      = (rs: ResultSet) => groupBy.get(rs),
       filters     = filters,

@@ -32,7 +32,7 @@ object Users {
   }
   def apply(alias: String) = {
     val users = new Users(Some(alias))
-    new Query[Users, Users, User](users, users.toModel _)
+    new Query[Users, Users, User](users)
   }
 }
 
@@ -56,7 +56,7 @@ object Companies {
   }
   def apply(alias: String) = {
     val companies = new Companies(Some(alias))
-    new Query[Companies, Companies, Company](companies, companies.toModel _)
+    new Query[Companies, Companies, Company](companies)
   }
 }
 ```
@@ -90,7 +90,17 @@ WHERE (u.USER_ID = ? OR u.USER_ID = ?)
 ORDER BY u.USER_ID ASC
 ```
 
-Also you can assemble insert, update and delete SQl in the same way.
+Grouping and aggregation are possible as follows:
+
+```scala
+val counts: Seq[(Option[Int], Long)] = 
+  Users("u")
+    .groupBy { t => t.companyId ~ t.userId.count }
+    .filter  { case companyId ~ count => count ge 10 }
+    .list(conn)
+```
+
+Also you can assemble insert, update and delete SQL in the same way.
 
 ```scala
 // INSERT

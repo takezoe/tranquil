@@ -62,7 +62,7 @@ class QuerySpec extends FunSuite {
 
       val results = Users("u")
         .groupBy { t => t.companyId ~ t.userId.count }
-        .filter { case _ ~ count => count eq 0 }
+        .filter { case _ ~ count => count ge 1 }
         .list(conn)
 
       assert(results == Seq((None, 1), (Some(1), 2)))

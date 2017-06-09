@@ -69,8 +69,7 @@ class MappedQuery[R](protected val underlying: Query[_, _, R]) extends RunnableQ
 
 class GroupingQuery[T, R](
   protected val underlying: Query[_, _, R],
-  private val definitions: T,
-  private val filters: Seq[Condition] = Nil
+  private val definitions: T
 ) extends RunnableQuery[R] {
 
   def selectStatement(): (String, BindParams) = {
@@ -80,9 +79,11 @@ class GroupingQuery[T, R](
 
   def filter(condition: T => Condition): GroupingQuery[T, R] = {
     new GroupingQuery(
-      underlying  = underlying,
-      definitions = definitions,
-      filters     = filters :+ condition(definitions)
+      underlying  = underlying.groupBy { _ =>
+        val grouping = underlying.grouping.get.asInstanceOf[GroupingColumns[T, R]]
+        grouping.copy(having = grouping.having :+ condition(definitions))
+      }.underlying,
+      definitions = definitions
     )
   }
 
@@ -105,7 +106,7 @@ class Query[B <: TableDef[_], T, R](
   private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val limit: Option[Int] = None,
   private val offset: Option[Int] = None,
-  private val groupBy: Option[GroupingColumns[_, R]] = None
+  private[tranquil] val grouping: Option[GroupingColumns[_, R]] = None
 ) extends RunnableQuery[R] {
 
   def this(base: B) = this(
@@ -138,7 +139,7 @@ class Query[B <: TableDef[_], T, R](
         leftJoins   = leftJoins,
         limit       = limit,
         offset      = offset,
-        groupBy     = Some(grouping)
+        grouping    = Some(grouping)
       ),
       definitions = grouping.definition
     )
@@ -306,10 +307,15 @@ class Query[B <: TableDef[_], T, R](
       sb.append(filters.map(_.sql).mkString(" AND "))
       bindParams ++= filters.flatMap(_.parameters)
     }
-    groupBy.foreach { groupBy =>
-      sb.append(" GROUP BY ")
-      sb.append(groupBy.groupByColumns.map(_.column.fullName).mkString(", "))
 
+    grouping.foreach { grouping =>
+      sb.append(" GROUP BY ")
+      sb.append(grouping.groupByColumns.map(_.column.fullName).mkString(", "))
+      if(grouping.having.nonEmpty){
+        sb.append(" HAVING ")
+        sb.append(grouping.having.map(_.sql).mkString(" AND "))
+        bindParams ++= grouping.having.flatMap(_.parameters)
+      }
     }
 
     if(sorts.nonEmpty){

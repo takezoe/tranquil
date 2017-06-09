@@ -31,6 +31,38 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
+  def gt(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} > ${column.fullName}")
+  }
+
+  def gt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} > ?", Seq(Param(value, binder)))
+  }
+
+  def ge(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} >= ${column.fullName}")
+  }
+
+  def ge(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} >= ?", Seq(Param(value, binder)))
+  }
+
+  def lt(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} < ${column.fullName}")
+  }
+
+  def lt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} < ?", Seq(Param(value, binder)))
+  }
+
+  def le(column: ColumnBase[T, _]): Condition = {
+    Condition(s"${fullName} <= ${column.fullName}")
+  }
+
+  def le(value: T)(implicit binder: ColumnBinder[T]): Condition = {
+    Condition(s"${fullName} <= ?", Seq(Param(value, binder)))
+  }
+
   def asc: Sort = {
     Sort(s"${fullName} ASC")
   }
@@ -138,8 +170,11 @@ case class GroupingColumn[S, T](column: ColumnBase[S, T], groupBy: Boolean = tru
 /**
  * Set of grouping columns.
  */
-case class GroupingColumns[T, R](definition: T, columns: Seq[GroupingColumn[_, _]], binder: ResultSet => R){
-
+case class GroupingColumns[T, R](
+  definition: T, columns: Seq[GroupingColumn[_, _]],
+  binder: ResultSet => R,
+  having: Seq[Condition] = Nil
+){
   def ~ [S, K](column: GroupingColumn[K, S]): GroupingColumns[(T, ColumnBase[K, S]), (R, S)] = {
     GroupingColumns(
       (definition, column.column),

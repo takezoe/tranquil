@@ -43,15 +43,15 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     UpdateColumn(Seq(this), Seq(Param(value, binder)))
   }
 
-  def count: GroupingColumn[Long] = {
+  def count: GroupingColumn[Long, Long] = {
     GroupingColumn(new FunctionColumn[Long](alias, columnName, s"COUNT(${fullName})"), false)
   }
 
-  def max: GroupingColumn[Long] = {
+  def max: GroupingColumn[Long, Long] = {
     GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MAX(${fullName})"), false)
   }
 
-  def min: GroupingColumn[Long] = {
+  def min: GroupingColumn[Long, Long] = {
     GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})"), false)
   }
 }
@@ -133,18 +133,22 @@ case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet =>
  * If groupBy is true, this column means used as a grouping key.
  * Otherwise, this column means aggregate function call.
  */
-case class GroupingColumn[T](column: ColumnBase[_, T], groupBy: Boolean = true)
+case class GroupingColumn[S, T](column: ColumnBase[S, T], groupBy: Boolean = true)
 
 /**
  * Set of grouping columns.
  */
-case class GroupingColumns[T](columns: Seq[GroupingColumn[_]], binder: ResultSet => T){
+case class GroupingColumns[T, R](definition: T, columns: Seq[GroupingColumn[_, _]], binder: ResultSet => R){
 
-  def ~ [S](column: GroupingColumn[S]): GroupingColumns[(T, S)] = {
-    GroupingColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.column.get(rs)))
+  def ~ [S, K](column: GroupingColumn[K, S]): GroupingColumns[(T, ColumnBase[K, S]), (R, S)] = {
+    GroupingColumns(
+      (definition, column.column),
+      columns :+ column,
+      (rs: ResultSet) => (binder(rs), column.column.get(rs))
+    )
   }
 
-  def get(rs: ResultSet): T = binder(rs)
+  def get(rs: ResultSet): R = binder(rs)
 
   lazy val groupByColumns = columns.filter(_.groupBy)
 

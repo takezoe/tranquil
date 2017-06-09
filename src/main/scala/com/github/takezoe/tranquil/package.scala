@@ -111,7 +111,7 @@ package object tranquil {
 
   implicit def toSelectColumns[T](column: ColumnBase[_, T]): SelectColumns[T] = SelectColumns(Seq(column), column.get)
   implicit def toSelectColumns[T](table: TableDef[T]): SelectColumns[T] = SelectColumns(table.columns, table.toModel)
-  implicit def toGroupingColumns[T](column: ColumnBase[_, T]): GroupingColumns[T] = GroupingColumns(Seq(GroupingColumn(column)), column.get)
+  implicit def toGroupingColumns[T, S](column: ColumnBase[T, S]): GroupingColumns[ColumnBase[T, S], S] = GroupingColumns(column, Seq(GroupingColumn(column)), column.get)
 
   private[tranquil] def using[R <: AutoCloseable, T](resource: R)(f: R => T): T = {
     try {

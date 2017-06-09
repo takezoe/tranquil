@@ -67,6 +67,27 @@ class MappedQuery[R](protected val underlying: Query[_, _, R]) extends RunnableQ
   }
 }
 
+class GroupingQuery[T, R](
+  protected val underlying: Query[_, _, R],
+  private val definitions: T,
+  private val filters: Seq[Condition] = Nil
+) extends RunnableQuery[R] {
+
+  def selectStatement(): (String, BindParams) = {
+    underlying.selectStatement()
+    // TODO generate HAVING query here? or implement in Query?
+  }
+
+  def filter(condition: T => Condition): GroupingQuery[T, R] = {
+    new GroupingQuery(
+      underlying  = underlying,
+      definitions = definitions,
+      filters     = filters :+ condition(definitions)
+    )
+  }
+
+}
+
 /**
  *
  * @tparam B the base table definition type of this query
@@ -84,7 +105,7 @@ class Query[B <: TableDef[_], T, R](
   private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
   private val limit: Option[Int] = None,
   private val offset: Option[Int] = None,
-  private val groupBy: Option[GroupingColumns[R]] = None
+  private val groupBy: Option[GroupingColumns[_, R]] = None
 ) extends RunnableQuery[R] {
 
   def this(base: B) = this(
@@ -102,29 +123,31 @@ class Query[B <: TableDef[_], T, R](
 
   private def getBase: TableDef[_] = base
 
-  def groupBy[J](f: T => GroupingColumns[J]): MappedQuery[J] = {
-    val groupBy = f(definitions)
+  def groupBy[T2, R2](f: T => GroupingColumns[T2, R2]): GroupingQuery[T2, R2] = {
+    val grouping = f(definitions)
 
-    new MappedQuery(new Query[B, T, J](
-      base        = base,
-      columns     = groupBy.columns.map(_.column),
-      definitions = definitions,
-      mapper      = (rs: ResultSet) => groupBy.get(rs),
-      filters     = filters,
-      sorts       = sorts,
-      innerJoins  = innerJoins,
-      leftJoins   = leftJoins,
-      limit       = limit,
-      offset      = offset,
-      groupBy     = Some(groupBy)
-    ))
-
+    new GroupingQuery[T2, R2](
+      underlying = new Query[B, T, R2](
+        base        = base,
+        columns     = grouping.columns.map(_.column),
+        definitions = definitions,
+        mapper      = (rs: ResultSet) => grouping.get(rs),
+        filters     = filters,
+        sorts       = sorts,
+        innerJoins  = innerJoins,
+        leftJoins   = leftJoins,
+        limit       = limit,
+        offset      = offset,
+        groupBy     = Some(grouping)
+      ),
+      definitions = grouping.definition
+    )
   }
 
-  def map[J](f: T => SelectColumns[J]): MappedQuery[J] = {
+  def map[R2](f: T => SelectColumns[R2]): MappedQuery[R2] = {
     val select = f(definitions)
 
-    new MappedQuery(new Query[B, T, J](
+    new MappedQuery(new Query[B, T, R2](
       base        = base,
       columns     = select.columns,
       definitions = definitions,
@@ -138,8 +161,8 @@ class Query[B <: TableDef[_], T, R](
     ))
   }
 
-  def innerJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, K)] = {
-    new Query[B, (T, J), (R, K)](
+  def innerJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, T2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+    new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
       definitions = (definitions, table.base),
@@ -153,8 +176,8 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[J <: TableDef[K], K](table: Query[J, J, K])(on: (T, J) => Condition): Query[B, (T, J), (R, Option[K])] = {
-    new Query[B, (T, J), (R, Option[K])](
+  def leftJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+    new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,
       definitions = (definitions, table.base),

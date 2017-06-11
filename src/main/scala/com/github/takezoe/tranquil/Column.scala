@@ -23,6 +23,11 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
+  def eq(query: RunnableQuery[T]): Condition = {
+    val (sql, params) = query.selectStatement()
+    Condition(s"${fullName} = (${sql})", params.params)
+  }
+
   def ne(column: ColumnBase[T, _]): Condition = {
     Condition(s"${fullName} <> ${column.fullName}")
   }

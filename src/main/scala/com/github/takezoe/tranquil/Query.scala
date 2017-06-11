@@ -10,9 +10,8 @@ import scala.collection.mutable.ListBuffer
 trait RunnableQuery[R] {
   protected val underlying: Query[_, _, R]
 
-  // TODO It's possible to optimize the query for getting count.
   def count(conn: Connection): Int = {
-    val (sql: String, bindParams: BindParams) = underlying.selectStatement(select = Some("COUNT(*) AS COUNT"))
+    val (sql: String, bindParams: BindParams) = underlying._selectStatement(select = Some("COUNT(*) AS COUNT"))
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       using(stmt.executeQuery()){ rs =>
@@ -56,6 +55,8 @@ trait RunnableQuery[R] {
     }
   }
 
+  def selectStatement(): (String, BindParams)
+
 }
 
 /**
@@ -72,9 +73,8 @@ class GroupingQuery[T, R](
   private val definitions: T
 ) extends RunnableQuery[R] {
 
-  def selectStatement(): (String, BindParams) = {
+  override def selectStatement(): (String, BindParams) = {
     underlying.selectStatement()
-    // TODO generate HAVING query here? or implement in Query?
   }
 
   def filter(condition: T => Condition): GroupingQuery[T, R] = {
@@ -252,7 +252,15 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def selectStatement(bindParams: BindParams = new BindParams(), select: Option[String] = None): (String, BindParams) = {
+  override def selectStatement(): (String, BindParams) = {
+    _selectStatement()
+  }
+
+  private[tranquil] def _selectStatement(
+    bindParams: BindParams = new BindParams(),
+    select: Option[String] = None
+  ): (String, BindParams) = {
+
     val sb = new StringBuilder()
     sb.append("SELECT ")
 
@@ -277,7 +285,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.selectStatement(bindParams)._1)
+        sb.append(query._selectStatement(bindParams)._1)
         sb.append(")")
       }
       sb.append(" ")
@@ -293,7 +301,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(query.getBase.tableName)
       } else {
         sb.append("(")
-        sb.append(query.selectStatement(bindParams))
+        sb.append(query._selectStatement(bindParams))
         sb.append(")")
       }
       sb.append(" ")

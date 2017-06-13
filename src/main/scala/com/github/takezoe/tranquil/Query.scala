@@ -7,8 +7,9 @@ import scala.collection.mutable.ListBuffer
 /**
  * Define execution methods for Query.
  */
-trait RunnableQuery[R] {
-  protected val underlying: Query[_, _, R]
+trait RunnableQuery[T, R] {
+  protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R]
+  protected[tranquil] val definitions: T
 
   def count(conn: Connection): Int = {
     val (sql: String, bindParams: BindParams) = underlying._selectStatement(select = Some("COUNT(*) AS COUNT"))
@@ -62,16 +63,20 @@ trait RunnableQuery[R] {
 /**
  * Represent a mapped query which is not accept additional operation except execution.
  */
-class MappedQuery[R](protected val underlying: Query[_, _, R]) extends RunnableQuery[R] {
-  def selectStatement(): (String, BindParams) = {
+class MappedQuery[T, R](protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R]) extends RunnableQuery[T, R] {
+
+  override protected[tranquil] val definitions: T = underlying.definitions
+
+  override def selectStatement(): (String, BindParams) = {
     underlying.selectStatement()
   }
+
 }
 
 class GroupingQuery[T, R](
-  protected val underlying: Query[_, _, R],
-  private val definitions: T
-) extends RunnableQuery[R] {
+  protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R],
+  protected[tranquil] val definitions: T
+) extends RunnableQuery[T, R] {
 
   override def selectStatement(): (String, BindParams) = {
     underlying.selectStatement()
@@ -96,18 +101,18 @@ class GroupingQuery[T, R](
  * @tparam R the result type of this query
  */
 class Query[B <: TableDef[_], T, R](
-  private val base: B,
-  private val columns: Seq[ColumnBase[_, _]],
-  private val definitions: T,
-  private[tranquil] val mapper: ResultSet => R,
-  private val filters: Seq[Condition] = Nil,
-  private val sorts: Seq[Sort] = Nil,
-  private val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
-  private val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
-  private val limit: Option[Int] = None,
-  private val offset: Option[Int] = None,
-  private[tranquil] val grouping: Option[GroupingColumns[_, R]] = None
-) extends RunnableQuery[R] {
+  protected[tranquil] val base: B,
+  protected[tranquil] val columns: Seq[ColumnBase[_, _]],
+  protected[tranquil] val definitions: T,
+  protected[tranquil] val mapper: ResultSet => R,
+  protected[tranquil] val filters: Seq[Condition] = Nil,
+  protected[tranquil] val sorts: Seq[Sort] = Nil,
+  protected[tranquil] val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
+  protected[tranquil] val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
+  protected[tranquil] val limit: Option[Int] = None,
+  protected[tranquil] val offset: Option[Int] = None,
+  protected[tranquil] val grouping: Option[GroupingColumns[_, R]] = None
+) extends RunnableQuery[T, R] {
 
   def this(base: B) = this(
     base        = base,
@@ -116,7 +121,7 @@ class Query[B <: TableDef[_], T, R](
     mapper      = (base.toModel _).asInstanceOf[ResultSet => R]
   )
 
-  override protected val underlying = this
+  override protected[tranquil] val underlying = this
 
   private def isTableQuery: Boolean = {
     filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
@@ -128,10 +133,10 @@ class Query[B <: TableDef[_], T, R](
     val grouping = f(definitions)
 
     new GroupingQuery[T2, R2](
-      underlying = new Query[B, T, R2](
+      underlying = new Query[B, T2, R2](
         base        = base,
         columns     = grouping.columns.map(_.column),
-        definitions = definitions,
+        definitions = grouping.definition,
         mapper      = (rs: ResultSet) => grouping.get(rs),
         filters     = filters,
         sorts       = sorts,
@@ -145,13 +150,13 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def map[R2](f: T => SelectColumns[R2]): MappedQuery[R2] = {
+  def map[T2, R2](f: T => SelectColumns[T2, R2]): MappedQuery[T2, R2] = {
     val select = f(definitions)
 
-    new MappedQuery(new Query[B, T, R2](
+    new MappedQuery(new Query[B, T2, R2](
       base        = base,
       columns     = select.columns,
-      definitions = definitions,
+      definitions = select.definition,
       mapper      = (rs: ResultSet) => select.get(rs),
       filters     = filters,
       sorts       = sorts,
@@ -176,6 +181,21 @@ class Query[B <: TableDef[_], T, R](
       offset      = offset
     )
   }
+
+//  def innerJoin[T2, R2](query: RunnableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+//    new Query[B, (T, T2), (R, R2)](
+//      base        = base,
+//      columns     = columns,
+//      definitions = (definitions, query.definitions),
+//      mapper      = (rs: ResultSet) => (mapper(rs), query.underlying.mapper(rs)),
+//      filters     = filters,
+//      sorts       = sorts,
+//      innerJoins  = innerJoins :+ (query.underlying, on(definitions, query.definitions)),
+//      leftJoins   = leftJoins,
+//      limit       = limit,
+//      offset      = offset
+//    )
+//  }
 
   def leftJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
     new Query[B, (T, T2), (R, Option[R2])](

@@ -23,7 +23,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} = ?", Seq(Param(value, binder)))
   }
 
-  def eq(query: RunnableQuery[T]): Condition = {
+  def eq(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} = (${sql})", params.params)
   }
@@ -36,7 +36,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
   }
 
-  def ne(query: RunnableQuery[T]): Condition = {
+  def ne(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} <> (${sql})", params.params)
   }
@@ -49,7 +49,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} > ?", Seq(Param(value, binder)))
   }
 
-  def gt(query: RunnableQuery[T]): Condition = {
+  def gt(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} > (${sql})", params.params)
   }
@@ -62,7 +62,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} >= ?", Seq(Param(value, binder)))
   }
 
-  def ge(query: RunnableQuery[T]): Condition = {
+  def ge(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} >= (${sql})", params.params)
   }
@@ -75,7 +75,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} < ?", Seq(Param(value, binder)))
   }
 
-  def lt(query: RunnableQuery[T]): Condition = {
+  def lt(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} < (${sql})", params.params)
   }
@@ -88,7 +88,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(s"${fullName} <= ?", Seq(Param(value, binder)))
   }
 
-  def le(query: RunnableQuery[T]): Condition = {
+  def le(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(s"${fullName} <= (${sql})", params.params)
   }
@@ -179,13 +179,20 @@ private class OptionalColumnBinder[T](binder: ColumnBinder[T]) extends ColumnBin
 /**
  * Set of select columns and binder which retrieves values from these columns
  */
-case class SelectColumns[T](columns: Seq[ColumnBase[_, _]], binder: ResultSet => T){
-
-  def ~ [S](column: ColumnBase[_, S]): SelectColumns[(T, S)] = {
-    SelectColumns(columns :+ column, (rs: ResultSet) => (binder(rs), column.get(rs)))
+case class SelectColumns[T, R](
+  definition: T,
+  columns: Seq[ColumnBase[_, _]],
+  binder: ResultSet => R
+){
+  def ~ [S, K](column: ColumnBase[K, S]): SelectColumns[(T, ColumnBase[K, S]), (R, S)] = {
+    SelectColumns(
+      (definition, column),
+      columns :+ column,
+      (rs: ResultSet) => (binder(rs), column.get(rs))
+    )
   }
 
-  def get(rs: ResultSet): T = binder(rs)
+  def get(rs: ResultSet): R = binder(rs)
 
 }
 

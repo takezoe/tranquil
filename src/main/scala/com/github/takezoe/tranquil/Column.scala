@@ -208,7 +208,8 @@ case class GroupingColumn[S, T](column: ColumnBase[S, T], groupBy: Boolean = tru
  * Set of grouping columns.
  */
 case class GroupingColumns[T, R](
-  definition: T, columns: Seq[GroupingColumn[_, _]],
+  definition: T,
+  columns: Seq[GroupingColumn[_, _]],
   binder: ResultSet => R,
   having: Seq[Condition] = Nil
 ){

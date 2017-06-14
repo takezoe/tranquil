@@ -90,26 +90,31 @@ class QuerySpec extends FunSuite {
     }
   }
 
-//  test("subquery + innerJoin"){
-//    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
-//    try {
-//      createTables(conn)
-//      Companies().insert(_.companyName -> "BizReach").execute(conn)
-//      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
-//
-//      val subquery = Companies("c")
-//        .filter(_.companyName eq "BizReach")
-//        .map { t => t.companyId ~ t.companyName }
-//
-//      val results = Users("u")
-//        .innerJoin(subquery){ case u ~ c => u.companyId eq c._1}
-//        .list(conn)
-//
-//      assert(results == Seq(User("1", "employee1", Some(1))))
-//    } finally {
-//      conn.close()
-//    }
-//  }
+  test("subquery + innerJoin / leftJoin"){
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    try {
+      createTables(conn)
+      Companies().insert(_.companyName -> "BizReach").execute(conn)
+      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+
+      val subquery1 = Companies("c1")
+        .filter(_.companyName eq "BizReach")
+        .map { t => t.companyId ~ t.companyName }
+
+      val subquery2 = Companies("c2")
+        .filter(_.companyName eq "BizReach")
+        .map { t => t.companyId ~ t.companyName }
+
+      val results = Users("u")
+        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c._1}
+        .leftJoin(subquery2, "x2"){ case u ~ _ ~ c => u.companyId eq c._1}
+        .list(conn)
+
+      assert(results == Seq(((User("1", "employee1", Some(1)), (1, "BizReach")), Some((1, "BizReach")))))
+    } finally {
+      conn.close()
+    }
+  }
 
   private def createTables(conn: Connection) = {
     executeSql(conn,

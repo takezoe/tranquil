@@ -11,86 +11,88 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
   val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
 
+  protected[tranquil] def lift(query: Query[_, _, _]): ColumnBase[T, S]
+
   def get(rs: ResultSet): S = {
     binder.get(asName, rs)
   }
 
   def eq(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} = ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), "=", Nil)
   }
 
   def eq(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} = ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "=", Seq(Param(value, binder)))
   }
 
   def eq(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} = (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "=", params.params)
   }
 
   def ne(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} <> ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), "<>", Nil)
   }
 
   def ne(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} <> ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<>", Seq(Param(value, binder)))
   }
 
   def ne(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} <> (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<>", params.params)
   }
 
   def gt(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} > ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), ">", Nil)
   }
 
   def gt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} > ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), ">", Seq(Param(value, binder)))
   }
 
   def gt(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} > (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), ">", params.params)
   }
 
   def ge(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} >= ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), ">=", Nil)
   }
 
   def ge(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} >= ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), ">=", Seq(Param(value, binder)))
   }
 
   def ge(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} >= (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), ">=", params.params)
   }
 
   def lt(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} < ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), "<", Nil)
   }
 
   def lt(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} < ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<", Seq(Param(value, binder)))
   }
 
   def lt(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} < (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<", params.params)
   }
 
   def le(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} <= ${column.fullName}")
+    Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), "<=", Nil)
   }
 
   def le(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(s"${fullName} <= ?", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<+", Seq(Param(value, binder)))
   }
 
   def le(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
-    Condition(s"${fullName} <= (${sql})", params.params)
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<=", params.params)
   }
 
   def asc: Sort = {
@@ -122,7 +124,14 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
  * Represent a non-null column
  */
 class Column[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
-  extends ColumnBase[T, T](alias, columnName)(binder)
+  extends ColumnBase[T, T](alias, columnName)(binder){
+
+  override protected[tranquil] def lift(query: Query[_, _, _]) = {
+    if(query.columns.contains(this)){
+      new Column[T](query.alias, asName)
+    } else this
+  }
+}
 
 
 /**
@@ -131,8 +140,9 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
 class OptionalColumn[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
   extends ColumnBase[T, Option[T]](alias, columnName)(new OptionalColumnBinder[T](binder)){
 
+  // TODO Fix me!!
   def isNull(column: ColumnBase[T, _]): Condition = {
-    Condition(s"${fullName} IS NULL")
+    Condition(SimpleColumnTerm(this), None, "IS NULL")
   }
 
   def asNull: UpdateColumn = {
@@ -143,6 +153,12 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
       }
       override def get(name: String, rs: ResultSet): T = ???
     })))
+  }
+
+  override protected[tranquil] def lift(query: Query[_, _, _]) = {
+    if(query.columns.contains(this)){
+      new OptionalColumn[T](query.alias, asName)
+    } else this
   }
 }
 

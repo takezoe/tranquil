@@ -328,14 +328,14 @@ class Query[B <: TableDef[_], T, R](
             if(query.isTableQuery){
               query.getBase.columns.map(c => c.fullName + " AS " + c.asName)
             } else {
-              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName) // TODO
+              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName)
             }
           } ++
           leftJoins.flatMap  { case (query, _) =>
             if(query.isTableQuery){
               query.getBase.columns.map(c => c.fullName + " AS " + c.asName)
             } else {
-              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName) // TODO
+              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName)
             }
           }
         sb.append(selectColumns.mkString(", "))
@@ -362,9 +362,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(") ")
         sb.append(query.alias.get)
         sb.append(" ON ")
-        sb.append(query.columns.foldLeft(condition.sql){ case (sql, column) =>
-          sql.replace(column.fullName, query.alias.get + "." + column.asName)
-        })
+        sb.append(condition.lift(query).sql)
         bindParams ++= condition.parameters
       }
     }
@@ -383,9 +381,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(") ")
         sb.append(query.alias.get)
         sb.append(" ON ")
-        sb.append(query.columns.foldLeft(condition.sql){ case (sql, column) =>
-          sql.replace(column.fullName, query.alias.get + "." + column.asName)
-        })
+        sb.append(condition.lift(query).sql)
         bindParams ++= condition.parameters
       }
     }

@@ -140,7 +140,6 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
 class OptionalColumn[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
   extends ColumnBase[T, Option[T]](alias, columnName)(new OptionalColumnBinder[T](binder)){
 
-  // TODO Fix me!!
   def isNull(column: ColumnBase[T, _]): Condition = {
     Condition(SimpleColumnTerm(this), None, "IS NULL")
   }

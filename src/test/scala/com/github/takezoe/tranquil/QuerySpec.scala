@@ -1,6 +1,7 @@
 package com.github.takezoe.tranquil
 
 import java.sql._
+
 import org.scalatest.FunSuite
 
 class QuerySpec extends FunSuite {
@@ -102,13 +103,21 @@ class QuerySpec extends FunSuite {
         .map { t => t.companyId ~ t.companyName }
 
       val subquery2 = Companies("c2")
-        .filter(_.companyName eq "BizReach")
-        .map { t => t.companyId ~ t.companyName }
+        .groupBy { t =>
+          t.companyName ~ t.companyId.max
+        }
 
-      val results = Users("u")
+      println(subquery2.selectStatement()._1)
+
+      val query = Users("u")
         .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c._1}
-        .leftJoin(subquery2, "x2"){ case u ~ _ ~ c => u.companyId eq c._1}
-        .list(conn)
+        .leftJoin(subquery2, "x2"){ case _ ~ c1 ~ c2 => c1._2 eq c2._1}
+        //.list(conn)
+
+
+      println(query.selectStatement()._1)
+
+      val results = query.list(conn)
 
       assert(results == Seq(((User("1", "employee1", Some(1)), (1, "BizReach")), Some((1, "BizReach")))))
     } finally {

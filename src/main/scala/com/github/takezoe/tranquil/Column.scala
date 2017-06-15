@@ -108,15 +108,15 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
   }
 
   def count: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"COUNT(${fullName})"), false)
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"COUNT(${fullName})", asName + "_COUNT"), false)
   }
 
   def max: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MAX(${fullName})"), false)
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MAX(${fullName})", asName + "_MAX"), false)
   }
 
   def min: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})"), false)
+    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})", asName + "_MIN"), false)
   }
 }
 
@@ -164,8 +164,9 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
 /**
  * Represent function call
  */
-class FunctionColumn[T](alias: Option[String], columnName: String, select: String)
+class FunctionColumn[T](alias: Option[String], columnName: String, select: String, name: String)
                        (implicit binder: ColumnBinder[T]) extends Column[T](alias, columnName)(binder){
+  override val asName = name
   override val fullName = select
 }
 

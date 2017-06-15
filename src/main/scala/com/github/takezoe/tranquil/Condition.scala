@@ -5,25 +5,21 @@ import java.sql.PreparedStatement
 trait ConditionTerm {
   val underlying: Option[ColumnBase[_, _]]
   def sql: String
-  def lift(query: Query[_, _, _]): ConditionTerm
 }
 
 case class SimpleColumnTerm(column: ColumnBase[_, _]) extends ConditionTerm {
   override val underlying: Option[ColumnBase[_, _]] = Some(column)
   override def sql: String = column.fullName
-  override def lift(query: Query[_, _, _]) = SimpleColumnTerm(column.lift(query))
 }
 
 case class PlaceHolderTerm() extends ConditionTerm {
   override val underlying: Option[ColumnBase[_, _]] = None
   override def sql: String = "?"
-  override def lift(query: Query[_, _, _]) = this
 }
 
 case class QueryTerm(query: String) extends ConditionTerm {
   override val underlying: Option[ColumnBase[_, _]] = None
   override def sql: String = query
-  override def lift(query: Query[_, _, _]) = this
 }
 
 /**
@@ -53,9 +49,6 @@ case class Condition(
     }
   }
 
-  override def lift(query: Query[_, _, _]) = {
-    Condition(left.lift(query), right.map(_.lift(query)), operator, parameters)
-  }
 }
 
 /**

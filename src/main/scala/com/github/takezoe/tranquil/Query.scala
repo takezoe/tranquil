@@ -110,8 +110,8 @@ class Query[B <: TableDef[_], T, R](
   protected[tranquil] val mapper: ResultSet => R,
   protected[tranquil] val filters: Seq[Condition] = Nil,
   protected[tranquil] val sorts: Seq[Sort] = Nil,
-  protected[tranquil] val innerJoins: Seq[(Query[_, _, _], Condition)] = Nil,
-  protected[tranquil] val leftJoins: Seq[(Query[_, _, _], Condition)] = Nil,
+  protected[tranquil] val innerJoins: Seq[(RunnableQuery[_, _], String, Condition)] = Nil,
+  protected[tranquil] val leftJoins: Seq[(RunnableQuery[_, _], String, Condition)] = Nil,
   protected[tranquil] val limit: Option[Int] = None,
   protected[tranquil] val offset: Option[Int] = None,
   protected[tranquil] val grouping: Option[GroupingColumns[_, R]] = None,
@@ -128,7 +128,7 @@ class Query[B <: TableDef[_], T, R](
   override protected[tranquil] val underlying = this
 
   private def isTableQuery: Boolean = {
-    filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty
+    filters.isEmpty && sorts.isEmpty && innerJoins.isEmpty && leftJoins.isEmpty && grouping.isEmpty
   }
 
   private def getBase: TableDef[_] = base
@@ -179,7 +179,7 @@ class Query[B <: TableDef[_], T, R](
       mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (table, on(definitions, table.base)),
+      innerJoins  = innerJoins :+ (table, table.alias.getOrElse("****"), on(definitions, table.base)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
@@ -194,7 +194,7 @@ class Query[B <: TableDef[_], T, R](
       mapper      = (rs: ResultSet) => (mapper(rs), query.underlying.mapper(rs)),
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (query.underlying.withAlias(alias), on(definitions, query.definitions)),
+      innerJoins  = innerJoins :+ (query, alias, on(definitions, query.definitions)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
@@ -210,7 +210,7 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, on(definitions, table.base)),
+      leftJoins   = leftJoins :+ (table, table.alias.getOrElse("*****"), on(definitions, table.base)),
       limit       = limit,
       offset      = offset
     )
@@ -225,7 +225,7 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (query.underlying.withAlias(alias), on(definitions, query.definitions)),
+      leftJoins   = leftJoins :+ (query, alias, on(definitions, query.definitions)),
       limit       = limit,
       offset      = offset
     )
@@ -324,18 +324,18 @@ class Query[B <: TableDef[_], T, R](
       case Some(x) => sb.append(x)
       case None => {
         val selectColumns = columns.map(c => c.fullName + " AS " + c.asName) ++
-          innerJoins.flatMap { case (query, _) =>
-            if(query.isTableQuery){
-              query.getBase.columns.map(c => c.fullName + " AS " + c.asName)
+          innerJoins.flatMap { case (query, alias, _) =>
+            if(query.underlying.isTableQuery){
+              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.asName)
             } else {
-              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName)
+              query.underlying.columns.map(c => alias + "." + c.asName + " AS " + c.asName)
             }
           } ++
-          leftJoins.flatMap  { case (query, _) =>
-            if(query.isTableQuery){
-              query.getBase.columns.map(c => c.fullName + " AS " + c.asName)
+          leftJoins.flatMap  { case (query, alias, _) =>
+            if(query.underlying.isTableQuery){
+              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.asName)
             } else {
-              query.getBase.columns.map(c => query.alias.get + "." + c.asName + " AS " + c.asName)
+              query.underlying.columns.map(c => alias + "." + c.asName + " AS " + c.asName)
             }
           }
         sb.append(selectColumns.mkString(", "))
@@ -347,41 +347,44 @@ class Query[B <: TableDef[_], T, R](
     sb.append(" ")
     sb.append(base.alias.get)
 
-    innerJoins.foreach { case (query, condition) =>
+    innerJoins.foreach { case (query, alias, condition) =>
       sb.append(" INNER JOIN ")
-      if(query.isTableQuery){
-        sb.append(query.getBase.tableName)
+      if(query.underlying.isTableQuery){
+        sb.append(query.underlying.getBase.tableName)
         sb.append(" ")
-        sb.append(query.getBase.alias.get)
+        sb.append(alias)
         sb.append(" ON ")
-        sb.append(condition.sql)
         bindParams ++= condition.parameters
       } else {
+        val (sql, bind) = query.selectStatement()
         sb.append("(")
-        sb.append(query._selectStatement(bindParams)._1)
+        sb.append(sql)
         sb.append(") ")
-        sb.append(query.alias.get)
+        sb.append(alias)
         sb.append(" ON ")
-        sb.append(condition.lift(query).sql)
+        sb.append(condition.sql)
+        bindParams ++= bind.params
         bindParams ++= condition.parameters
       }
     }
 
-    leftJoins.foreach { case (query, condition) =>
+    leftJoins.foreach { case (query, alias, condition) =>
       sb.append(" LEFT JOIN ")
-      if(query.isTableQuery){
-        sb.append(query.getBase.tableName)
+      if(query.underlying.isTableQuery){
+        sb.append(query.underlying.getBase.tableName)
         sb.append(" ")
-        sb.append(query.getBase.alias.get)
+        sb.append(alias)
         sb.append(" ON ")
         sb.append(condition.sql)
       } else {
         sb.append("(")
-        sb.append(query._selectStatement(bindParams)._1)
+        val (sql, bind) = query.selectStatement()
+        sb.append(sql)
         sb.append(") ")
-        sb.append(query.alias.get)
+        sb.append(alias)
         sb.append(" ON ")
-        sb.append(condition.lift(query).sql)
+        sb.append(condition.sql)
+        bindParams ++= bind.params
         bindParams ++= condition.parameters
       }
     }

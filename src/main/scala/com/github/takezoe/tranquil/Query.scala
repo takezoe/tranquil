@@ -183,7 +183,7 @@ class Query[B <: TableDef[_], T, R](
       mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (table, table.alias.getOrElse(table.base.alias.getOrElse("****")), on(definitions, table.base)),
+      innerJoins  = innerJoins :+ (table, table.alias.getOrElse(table.base.alias.get), on(definitions, table.base)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
@@ -218,7 +218,7 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, table.alias.getOrElse(table.base.alias.getOrElse("****")), on(definitions, table.base)),
+      leftJoins   = leftJoins :+ (table, table.alias.getOrElse(table.base.alias.get), on(definitions, table.base)),
       limit       = limit,
       offset      = offset
     )

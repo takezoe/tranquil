@@ -158,14 +158,9 @@ class Users(val alias: Option[String]) extends TableDef[User] {
   val userId    = new Column[String](alias, "USER_ID")
   val userName  = new Column[String](alias, "USER_NAME")
   val companyId = new OptionalColumn[Int](alias, "COMPANY_ID")
-  val columns = Seq(userId, userName, companyId)
 
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
-  }
-
-  override def wrap(alias: String): Users.this.type = {
-    new Users(Some(alias)).asInstanceOf[this.type]
   }
 }
 
@@ -186,14 +181,9 @@ class Companies(val alias: Option[String]) extends TableDef[Company] {
   val tableName = "COMPANIES"
   val companyId   = new Column[Int](alias, "COMPANY_ID")
   val companyName = new Column[String](alias, "COMPANY_NAME")
-  val columns = Seq(companyId, companyName)
 
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
-  }
-
-  override def wrap(alias: String): Companies.this.type = {
-    new Companies(Some(alias)).asInstanceOf[this.type]
   }
 }
 

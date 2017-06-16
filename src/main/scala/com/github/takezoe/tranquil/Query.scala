@@ -350,6 +350,7 @@ class Query[B <: TableDef[_], T, R](
         sb.append(" ")
         sb.append(alias)
         sb.append(" ON ")
+        sb.append(condition.sql)
         bindParams ++= condition.parameters
       } else {
         val (sql, bind) = query.selectStatement()

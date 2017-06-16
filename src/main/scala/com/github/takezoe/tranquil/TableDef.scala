@@ -23,14 +23,10 @@ trait TableDef[R]{
   def toModel(rs: ResultSet): R
 }
 
-trait TableShape[T] {
-  val definitions: T
+abstract class TableShape[T](table: T){
+  val definitions: T = table
   val columns: Seq[ColumnBase[_, _]]
   def wrap(alias: String): TableShape[T]
-}
-
-abstract class TableShapeBase[T](table: T) extends TableShape[T]{
-  override val definitions: T = table
 }
 
 trait TableShapeOf[T] {

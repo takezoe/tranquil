@@ -131,12 +131,12 @@ package object tranquil {
   type Column3[T1, T2, T3] = ((ColumnBase[T1, T1], ColumnBase[T2, T2]), ColumnBase[T3, T3])
   type Column4[T1, T2, T3, T4] = (((ColumnBase[T1, T1], ColumnBase[T2, T2]), ColumnBase[T3, T3]), ColumnBase[T4, T4])
 
-  class TableDefShape[T <: TableDef[_]](table: T) extends TableShapeBase[T](table){
+  class TableDefShape[T <: TableDef[_]](table: T) extends TableShape[T](table){
     override def wrap(alias: String): TableShape[T] = new TableDefShape(table.wrap(alias).asInstanceOf[T])
     override val columns: Seq[ColumnBase[_, _]] = table.columns
   }
 
-  class Column2Shape[T1, T2](table: Column2[T1, T2]) extends TableShapeBase[Column2[T1, T2]](table){
+  class Column2Shape[T1, T2](table: Column2[T1, T2]) extends TableShape[Column2[T1, T2]](table){
     override def wrap(alias: String): TableShape[Column2[T1, T2]] = table match {
       case column1 ~ column2 =>
         new Column2Shape((
@@ -149,7 +149,7 @@ package object tranquil {
     }
   }
 
-  class Column3Shape[T1, T2, T3](table: Column3[T1, T2, T3]) extends TableShapeBase[Column3[T1, T2, T3]](table){
+  class Column3Shape[T1, T2, T3](table: Column3[T1, T2, T3]) extends TableShape[Column3[T1, T2, T3]](table){
     override def wrap(alias: String): TableShape[Column3[T1, T2, T3]] = table match {
       case column1 ~ column2 ~ column3 =>
         new Column3Shape((
@@ -163,7 +163,7 @@ package object tranquil {
     }
   }
 
-  class Column4Shape[T1, T2, T3, T4](table: Column4[T1, T2, T3, T4]) extends TableShapeBase[Column4[T1, T2, T3, T4]](table){
+  class Column4Shape[T1, T2, T3, T4](table: Column4[T1, T2, T3, T4]) extends TableShape[Column4[T1, T2, T3, T4]](table){
     override def wrap(alias: String): TableShape[Column4[T1, T2, T3, T4]] = table match {
       case column1 ~ column2 ~ column3 ~ column4 =>
         new Column4Shape((

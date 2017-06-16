@@ -69,11 +69,7 @@ class MappedQuery[T, R](
 ) extends RunnableQuery[T, R] {
 
   override protected[tranquil] val definitions: T = underlying.definitions
-
-  override def selectStatement(): (String, BindParams) = {
-    underlying.selectStatement()
-  }
-
+  override def selectStatement(): (String, BindParams) = underlying.selectStatement()
 }
 
 class GroupingQuery[T, R](
@@ -81,9 +77,7 @@ class GroupingQuery[T, R](
   protected[tranquil] val definitions: T
 ) extends RunnableQuery[T, R] {
 
-  override def selectStatement(): (String, BindParams) = {
-    underlying.selectStatement()
-  }
+  override def selectStatement(): (String, BindParams) = underlying.selectStatement()
 
   def filter(condition: T => Condition): GroupingQuery[T, R] = {
     new GroupingQuery(
@@ -94,8 +88,18 @@ class GroupingQuery[T, R](
       definitions = definitions
     )
   }
-
 }
+
+class WrappedQuery[T, R](
+  private[tranquil] val alias: String,
+  private[tranquil] val query: RunnableQuery[T, R]
+)(implicit val shape: TableShape[T]) extends RunnableQuery[T, R] {
+
+  override def selectStatement(): (String, BindParams) = query.selectStatement()
+  override protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R] = query.underlying
+  override protected[tranquil] val definitions: T = shape.wrap(alias).definitions
+}
+
 
 /**
  *
@@ -179,22 +183,26 @@ class Query[B <: TableDef[_], T, R](
       mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (table, table.alias.getOrElse("****"), on(definitions, table.base)),
+      innerJoins  = innerJoins :+ (table, table.alias.getOrElse(table.base.alias.getOrElse("****")), on(definitions, table.base)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
     )
   }
 
-  def innerJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+  def innerJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition)
+                       (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, R2)] = {
+
+    val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
+
     new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
-      definitions = (definitions, query.definitions),
-      mapper      = (rs: ResultSet) => (mapper(rs), query.underlying.mapper(rs)),
+      definitions = (definitions, wrappedQuery.definitions),
+      mapper      = (rs: ResultSet) => (mapper(rs), wrappedQuery.underlying.mapper(rs)),
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (query, alias, on(definitions, query.definitions)),
+      innerJoins  = innerJoins :+ (wrappedQuery, alias, on(definitions, wrappedQuery.definitions)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
@@ -210,22 +218,26 @@ class Query[B <: TableDef[_], T, R](
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, table.alias.getOrElse("*****"), on(definitions, table.base)),
+      leftJoins   = leftJoins :+ (table, table.alias.getOrElse(table.base.alias.getOrElse("****")), on(definitions, table.base)),
       limit       = limit,
       offset      = offset
     )
   }
 
-  def leftJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+  def leftJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition)
+                      (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, Option[R2])] = {
+
+    val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
+
     new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,
-      definitions = (definitions, query.definitions),
-      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(query.underlying.columns.head.asName) == null) None else Some(query.underlying.mapper(rs))),
+      definitions = (definitions, wrappedQuery.definitions),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(wrappedQuery.underlying.columns.head.asName) == null) None else Some(wrappedQuery.underlying.mapper(rs))),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (query, alias, on(definitions, query.definitions)),
+      leftJoins   = leftJoins :+ (wrappedQuery, alias, on(definitions, wrappedQuery.definitions)),
       limit       = limit,
       offset      = offset
     )
@@ -292,21 +304,23 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  protected[tranquil] def withAlias(alias: String): Query[B, T, R] = {
-    new Query[B, T, R](
-      base        = base,
-      columns     = columns,
-      definitions = definitions,
-      mapper      = mapper,
-      filters     = filters,
-      sorts       = sorts,
-      innerJoins  = innerJoins,
-      leftJoins   = leftJoins,
-      limit       = limit,
-      offset      = offset,
-      alias       = Some(alias)
-    )
-  }
+//  protected[tranquil] def withAlias(alias: String)(implicit shape: TableShape[T]): Query[B, T, R] = {
+//    val wrappedShape = shape.wrap(alias)
+//
+//    new Query[B, T, R](
+//      base        = base,
+//      columns     = wrappedShape.columns,
+//      definitions = wrappedShape.definitions,
+//      mapper      = mapper,
+//      filters     = filters,
+//      sorts       = sorts,
+//      innerJoins  = innerJoins,
+//      leftJoins   = leftJoins,
+//      limit       = limit,
+//      offset      = offset,
+//      alias       = Some(alias)
+//    )
+//  }
 
   override def selectStatement(): (String, BindParams) = {
     _selectStatement()

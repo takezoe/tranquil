@@ -13,6 +13,8 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
 
   protected[tranquil] def lift(query: Query[_, _, _]): ColumnBase[T, S]
 
+  def wrap(alias: String): this.type
+
   def get(rs: ResultSet): S = {
     binder.get(asName, rs)
   }
@@ -131,6 +133,10 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
       new Column[T](query.alias, asName)
     } else this
   }
+
+  override def wrap(alias: String): Column.this.type = {
+    new Column[T](Some(alias), asName).asInstanceOf[this.type]
+  }
 }
 
 
@@ -159,6 +165,10 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
       new OptionalColumn[T](query.alias, asName)
     } else this
   }
+
+  override def wrap(alias: String): OptionalColumn.this.type = {
+    new OptionalColumn[T](Some(alias), asName).asInstanceOf[this.type]
+  }
 }
 
 /**
@@ -168,6 +178,11 @@ class FunctionColumn[T](alias: Option[String], columnName: String, select: Strin
                        (implicit binder: ColumnBinder[T]) extends Column[T](alias, columnName)(binder){
   override val asName = name
   override val fullName = select
+
+  // TODO implement this method!!!!
+  override def wrap(alias: String): FunctionColumn.this.type = {
+    this
+  }
 }
 
 /**

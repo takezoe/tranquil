@@ -126,5 +126,62 @@ package object tranquil {
       }
     }
   }
+
+  type Column2[T1, T2] = (ColumnBase[T1, T1], ColumnBase[T2, T2])
+  type Column3[T1, T2, T3] = ((ColumnBase[T1, T1], ColumnBase[T2, T2]), ColumnBase[T3, T3])
+  type Column4[T1, T2, T3, T4] = (((ColumnBase[T1, T1], ColumnBase[T2, T2]), ColumnBase[T3, T3]), ColumnBase[T4, T4])
+
+  class TableDefShape[T <: TableDef[_]](table: T) extends TableShapeBase[T](table){
+    override def wrap(alias: String): TableShape[T] = new TableDefShape(table.wrap(alias).asInstanceOf[T])
+    override val columns: Seq[ColumnBase[_, _]] = table.columns
+  }
+
+  class Column2Shape[T1, T2](table: Column2[T1, T2]) extends TableShapeBase[Column2[T1, T2]](table){
+    override def wrap(alias: String): TableShape[Column2[T1, T2]] = table match {
+      case column1 ~ column2 =>
+        new Column2Shape((
+          column1.wrap(alias).asInstanceOf[ColumnBase[T1, T1]] ~
+          column2.wrap(alias).asInstanceOf[ColumnBase[T2, T2]]
+        ).definition)
+    }
+    override val columns: Seq[ColumnBase[_, _]] = table match {
+      case column1 ~ column2 => Seq(column1, column2)
+    }
+  }
+
+  class Column3Shape[T1, T2, T3](table: Column3[T1, T2, T3]) extends TableShapeBase[Column3[T1, T2, T3]](table){
+    override def wrap(alias: String): TableShape[Column3[T1, T2, T3]] = table match {
+      case column1 ~ column2 ~ column3 =>
+        new Column3Shape((
+          column1.wrap(alias).asInstanceOf[ColumnBase[T1, T1]] ~
+          column2.wrap(alias).asInstanceOf[ColumnBase[T2, T2]] ~
+          column3.wrap(alias).asInstanceOf[ColumnBase[T3, T3]]
+        ).definition)
+    }
+    override val columns: Seq[ColumnBase[_, _]] = table match {
+      case column1 ~ column2 ~ column3 => Seq(column1, column2, column3)
+    }
+  }
+
+  class Column4Shape[T1, T2, T3, T4](table: Column4[T1, T2, T3, T4]) extends TableShapeBase[Column4[T1, T2, T3, T4]](table){
+    override def wrap(alias: String): TableShape[Column4[T1, T2, T3, T4]] = table match {
+      case column1 ~ column2 ~ column3 ~ column4 =>
+        new Column4Shape((
+          column1.wrap(alias).asInstanceOf[ColumnBase[T1, T1]] ~
+          column2.wrap(alias).asInstanceOf[ColumnBase[T2, T2]] ~
+          column3.wrap(alias).asInstanceOf[ColumnBase[T3, T3]] ~
+          column4.wrap(alias).asInstanceOf[ColumnBase[T4, T4]]
+        ).definition)
+    }
+    override val columns: Seq[ColumnBase[_, _]] = table match {
+      case column1 ~ column2 ~ column3 ~ column4 => Seq(column1, column2, column3, column4)
+    }
+  }
+
+  implicit def tableShapeOf[T <: TableDef[_]]: TableShapeOf[T] = (table: T) => new TableDefShape[T](table)
+  implicit def column2ShapeOf[T1, T2]: TableShapeOf[Column2[T1, T2]] = (table: Column2[T1, T2]) => new Column2Shape[T1, T2](table)
+  implicit def column3ShapeOf[T1, T2, T3]: TableShapeOf[Column3[T1, T2, T3]] = (table: Column3[T1, T2, T3]) => new Column3Shape[T1, T2, T3](table)
+  implicit def column4ShapeOf[T1, T2, T3, T4]: TableShapeOf[Column4[T1, T2, T3, T4]] = (table: Column4[T1, T2, T3, T4]) => new Column4Shape[T1, T2, T3, T4](table)
+
 }
 

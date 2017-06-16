@@ -179,9 +179,9 @@ class FunctionColumn[T](alias: Option[String], columnName: String, select: Strin
   override val asName = name
   override val fullName = select
 
-  // TODO implement this method!!!!
   override def wrap(alias: String): FunctionColumn.this.type = {
-    this
+    // TODO Are columnName and name necessary?
+    new FunctionColumn[T](Some(alias), "** columnName **", asName, "** name **").asInstanceOf[this.type]
   }
 }
 

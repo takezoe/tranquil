@@ -304,24 +304,6 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-//  protected[tranquil] def withAlias(alias: String)(implicit shape: TableShape[T]): Query[B, T, R] = {
-//    val wrappedShape = shape.wrap(alias)
-//
-//    new Query[B, T, R](
-//      base        = base,
-//      columns     = wrappedShape.columns,
-//      definitions = wrappedShape.definitions,
-//      mapper      = mapper,
-//      filters     = filters,
-//      sorts       = sorts,
-//      innerJoins  = innerJoins,
-//      leftJoins   = leftJoins,
-//      limit       = limit,
-//      offset      = offset,
-//      alias       = Some(alias)
-//    )
-//  }
-
   override def selectStatement(): (String, BindParams) = {
     _selectStatement()
   }

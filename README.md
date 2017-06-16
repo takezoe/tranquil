@@ -23,6 +23,10 @@ class Users(val alias: Option[String]) extends TableDef[User] {
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
+  
+  override def wrap(alias: String): Users.this.type = {
+    new Users(Some(alias)).asInstanceOf[this.type]
+  }  
 }
 
 object Users {
@@ -47,6 +51,10 @@ class Companies(val alias: Option[String]) extends TableDef[Company] {
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
   }
+  
+  override def wrap(alias: String): Companies.this.type = {
+    new Companies(Some(alias)).asInstanceOf[this.type]
+  }  
 }
 
 object Companies {

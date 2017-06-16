@@ -72,7 +72,7 @@ class QuerySpec extends FunSuite {
     }
   }
 
-  test("subquery"){
+  test("subquery in condition"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
@@ -91,7 +91,7 @@ class QuerySpec extends FunSuite {
     }
   }
 
-  test("subquery + innerJoin / leftJoin"){
+  test("subquery in join"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
@@ -100,23 +100,15 @@ class QuerySpec extends FunSuite {
 
       val subquery1 = Companies("c1")
         .filter(_.companyName eq "BizReach")
-        .map { t => t.companyId ~ t.companyName }
 
       val subquery2 = Companies("c2")
-        .groupBy { t =>
-          t.companyName ~ t.companyId.max
-        }
+        .filter(_.companyName eq "BizReach")
+        .map { t => t.companyId ~ t.companyName }
 
-      println(subquery2.selectStatement()._1)
-
-      val query = Users("u")
-        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c._1}
-        .leftJoin(subquery2, "x2"){ case _ ~ c1 ~ c2 => c1._2 eq c2._1}
-        //.list(conn)
-
-      println(query.selectStatement()._1)
-
-      val results = query.list(conn)
+      val results = Users("u")
+        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }
+        .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
+        .list(conn)
 
       assert(results == Seq(((User("1", "employee1", Some(1)), (1, "BizReach")), Some((1, "BizReach")))))
     } finally {

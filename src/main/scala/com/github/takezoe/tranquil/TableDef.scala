@@ -7,7 +7,13 @@ abstract class TableDef[R](val tableName: String) extends Product {
     productIterator.collect { case c: ColumnBase[_, _] => c }.toSeq
   }
   val alias: Option[String]
-  def wrap(alias: String): this.type
+  def wrap(alias: String): this.type = {
+    val cols = columns
+    val constructor = getClass.getDeclaredConstructor(
+      classOf[Option[String]] +: cols.map(_.getClass): _*
+    )
+    constructor.newInstance(Option(alias) +: cols.map(_.wrap(alias)): _*).asInstanceOf[this.type]
+  }
   def toModel(rs: ResultSet): R
 }
 

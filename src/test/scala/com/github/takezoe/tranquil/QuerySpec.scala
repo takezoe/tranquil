@@ -110,7 +110,7 @@ class QuerySpec extends FunSuite {
         .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
         .list(conn)
 
-      assert(results == Seq(((User("1", "employee1", Some(1)), (1, "BizReach")), Some((1, "BizReach")))))
+      assert(results == Seq(((User("1", "employee1", Some(1)), Company(1, "BizReach")), Some((1, "BizReach")))))
     } finally {
       conn.close()
     }
@@ -155,35 +155,18 @@ case class Users(
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
-
-  override def wrap(alias: String): Users.this.type = {
-    new Users(
-      Some(alias),
-      new Column[String](Some(alias), userId.asName),
-      new Column[String](Some(alias), userName.asName),
-      new OptionalColumn[Int](Some(alias), userName.asName)
-    ).asInstanceOf[this.type]
-  }
 }
 
 object Users {
-  def apply() = {
-    val users = new Users(
-      None,
-      new Column[String](None, "USER_ID"),
-      new Column[String](None, "USER_NAME"),
-      new OptionalColumn[Int](None, "COMPANY_ID")
+  def apply() = new SingleTableAction[Users](table(None))
+  def apply(alias: String) = new Query[Users, Users, User](table(Some(alias)))
+  private def table(alias: Option[String]) = {
+    new Users(
+      alias,
+      new Column[String](alias, "USER_ID"),
+      new Column[String](alias, "USER_NAME"),
+      new OptionalColumn[Int](alias, "COMPANY_ID")
     )
-    new SingleTableAction[Users](users)
-  }
-  def apply(alias: String) = {
-    val users = new Users(
-      Some(alias),
-      new Column[String](Some(alias), "USER_ID"),
-      new Column[String](Some(alias), "USER_NAME"),
-      new OptionalColumn[Int](Some(alias), "COMPANY_ID")
-    )
-    new Query[Users, Users, User](users)
   }
 }
 
@@ -197,30 +180,16 @@ case class Companies(
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
   }
-  override def wrap(alias: String): Companies.this.type = {
-    Companies(
-      Some(alias),
-      new Column[Int](Some(alias), companyId.asName),
-      new Column[String](Some(alias), companyName.asName)
-    ).asInstanceOf[this.type]
-  }
 }
 
 object Companies {
-  def apply() = {
-    val companies = new Companies(
-      None,
-      new Column[Int](None, "COMPANY_ID"),
-      new Column[String](None, "COMPANY_NAME")
+  def apply() = new SingleTableAction[Companies](table(None))
+  def apply(alias: String) = new Query[Companies, Companies, Company](table(Some(alias)))
+  private def table(alias: Option[String]) = {
+    new Companies(
+      alias,
+      new Column[Int](alias, "COMPANY_ID"),
+      new Column[String](alias, "COMPANY_NAME")
     )
-    new SingleTableAction[Companies](companies)
-  }
-  def apply(alias: String) = {
-    val companies = new Companies(
-      Some(alias),
-      new Column[Int](Some(alias), "COMPANY_ID"),
-      new Column[String](Some(alias), "COMPANY_NAME")
-    )
-    new Query[Companies, Companies, Company](companies)
   }
 }

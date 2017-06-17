@@ -3,7 +3,6 @@ package com.github.takezoe.tranquil
 import java.sql._
 
 import org.scalatest.FunSuite
-import shapeless.ops.hlist.Mapper
 
 class QuerySpec extends FunSuite {
 
@@ -102,17 +101,9 @@ class QuerySpec extends FunSuite {
       val subquery1 = Companies("c1")
         .filter(_.companyName eq "BizReach")
 
-
-
       val subquery2 = Companies("c2")
         .filter(_.companyName eq "BizReach")
         .map { t => t.companyId ~ t.companyName }
-
-      val query = Users("u")
-        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }
-        .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
-
-      println(query.selectStatement()._1)
 
       val results = Users("u")
         .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }

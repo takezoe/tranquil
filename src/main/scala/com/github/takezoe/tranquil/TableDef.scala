@@ -2,24 +2,12 @@ package com.github.takezoe.tranquil
 
 import java.sql.ResultSet
 
-trait TableDef[R]{
-  val tableName: String
-
+abstract class TableDef[R](val tableName: String) extends Product {
   lazy val columns: Seq[ColumnBase[_, _]] = {
-    getClass.getDeclaredFields.filter { field =>
-      classOf[ColumnBase[_, _]].isAssignableFrom(field.getType)
-    }.map { field =>
-      field.setAccessible(true)
-      field.get(this).asInstanceOf[ColumnBase[_, _]]
-    }.toSeq
+    productIterator.collect { case c: ColumnBase[_, _] => c }.toSeq
   }
-
-  def wrap(alias: String): this.type = {
-    val constructor = getClass.getDeclaredConstructor(classOf[Option[String]])
-    constructor.newInstance(Some(alias)).asInstanceOf[this.type]
-  }
-
   val alias: Option[String]
+  def wrap(alias: String): this.type
   def toModel(rs: ResultSet): R
 }
 

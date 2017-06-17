@@ -3,6 +3,7 @@ package com.github.takezoe.tranquil
 import java.sql._
 
 import org.scalatest.FunSuite
+import shapeless.ops.hlist.Mapper
 
 class QuerySpec extends FunSuite {
 
@@ -101,9 +102,17 @@ class QuerySpec extends FunSuite {
       val subquery1 = Companies("c1")
         .filter(_.companyName eq "BizReach")
 
+
+
       val subquery2 = Companies("c2")
         .filter(_.companyName eq "BizReach")
         .map { t => t.companyId ~ t.companyName }
+
+      val query = Users("u")
+        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }
+        .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
+
+      println(query.selectStatement()._1)
 
       val results = Users("u")
         .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }
@@ -145,47 +154,82 @@ class QuerySpec extends FunSuite {
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
-class Users(val alias: Option[String]) extends TableDef[User] {
-  val tableName = "USERS"
-  val userId    = new Column[String](alias, "USER_ID")
-  val userName  = new Column[String](alias, "USER_NAME")
-  val companyId = new OptionalColumn[Int](alias, "COMPANY_ID")
+case class Users(
+  alias: Option[String],
+  userId: Column[String],
+  userName: Column[String],
+  companyId: OptionalColumn[Int]
+) extends TableDef[User]("USERS") {
 
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
+  }
+
+  override def wrap(alias: String): Users.this.type = {
+    new Users(
+      Some(alias),
+      new Column[String](Some(alias), userId.asName),
+      new Column[String](Some(alias), userName.asName),
+      new OptionalColumn[Int](Some(alias), userName.asName)
+    ).asInstanceOf[this.type]
   }
 }
 
 object Users {
   def apply() = {
-    val users = new Users(None)
+    val users = new Users(
+      None,
+      new Column[String](None, "USER_ID"),
+      new Column[String](None, "USER_NAME"),
+      new OptionalColumn[Int](None, "COMPANY_ID")
+    )
     new SingleTableAction[Users](users)
   }
   def apply(alias: String) = {
-    val users = new Users(Some(alias))
+    val users = new Users(
+      Some(alias),
+      new Column[String](Some(alias), "USER_ID"),
+      new Column[String](Some(alias), "USER_NAME"),
+      new OptionalColumn[Int](Some(alias), "COMPANY_ID")
+    )
     new Query[Users, Users, User](users)
   }
 }
 
 case class Company(companyId: Int, companyName: String)
 
-class Companies(val alias: Option[String]) extends TableDef[Company] {
-  val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "COMPANY_ID")
-  val companyName = new Column[String](alias, "COMPANY_NAME")
-
+case class Companies(
+  alias: Option[String],
+  companyId: Column[Int],
+  companyName: Column[String]
+) extends TableDef[Company]("COMPANIES") {
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
+  }
+  override def wrap(alias: String): Companies.this.type = {
+    Companies(
+      Some(alias),
+      new Column[Int](Some(alias), companyId.asName),
+      new Column[String](Some(alias), companyName.asName)
+    ).asInstanceOf[this.type]
   }
 }
 
 object Companies {
   def apply() = {
-    val companies = new Companies(None)
+    val companies = new Companies(
+      None,
+      new Column[Int](None, "COMPANY_ID"),
+      new Column[String](None, "COMPANY_NAME")
+    )
     new SingleTableAction[Companies](companies)
   }
   def apply(alias: String) = {
-    val companies = new Companies(Some(alias))
+    val companies = new Companies(
+      Some(alias),
+      new Column[Int](Some(alias), "COMPANY_ID"),
+      new Column[String](Some(alias), "COMPANY_NAME")
+    )
     new Query[Companies, Companies, Company](companies)
   }
 }

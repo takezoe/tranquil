@@ -13,11 +13,12 @@ import com.github.takezoe.tranquil._
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
-class Users(val alias: Option[String]) extends TableDef[User] {
-  val tableName = "USERS"
-  val userId    = new Column[String](alias, "USER_ID")
-  val userName  = new Column[String](alias, "USER_NAME")
-  val companyId = new NullableColumn[Int](alias, "COMPANY_ID")
+case class Users(
+  alias: Option[String],
+  userId: Column[String],
+  userName: Column[String],
+  companyId: OptionalColumn[Int]
+) extends TableDef[User]("USERS") {
 
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
@@ -25,36 +26,39 @@ class Users(val alias: Option[String]) extends TableDef[User] {
 }
 
 object Users {
-  def apply() = {
-    val users = new Users(None)
-    new SingleTableAction[Users](users)
-  }
-  def apply(alias: String) = {
-    val users = new Users(Some(alias))
-    new Query[Users, Users, User](users)
+  def apply() = new SingleTableAction[Users](table(None))
+  def apply(alias: String) = new Query[Users, Users, User](table(Some(alias)))
+  private def table(alias: Option[String]) = {
+    new Users(
+      alias,
+      new Column[String](alias, "USER_ID"),
+      new Column[String](alias, "USER_NAME"),
+      new OptionalColumn[Int](alias, "COMPANY_ID")
+    )
   }
 }
 
 case class Company(companyId: Int, companyName: String)
 
-class Companies(val alias: Option[String]) extends TableDef[Company] {
-  val tableName = "COMPANIES"
-  val companyId   = new Column[Int](alias, "COMPANY_ID")
-  val companyName = new Column[String](alias, "COMPANY_NAME")
-
+case class Companies(
+  alias: Option[String],
+  companyId: Column[Int],
+  companyName: Column[String]
+) extends TableDef[Company]("COMPANIES") {
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
   }
 }
 
 object Companies {
-  def apply() = {
-    val companies = new Companies(None)
-    new SingleTableAction[Companies](companies)
-  }
-  def apply(alias: String) = {
-    val companies = new Companies(Some(alias))
-    new Query[Companies, Companies, Company](companies)
+  def apply() = new SingleTableAction[Companies](table(None))
+  def apply(alias: String) = new Query[Companies, Companies, Company](table(Some(alias)))
+  private def table(alias: Option[String]) = {
+    new Companies(
+      alias,
+      new Column[Int](alias, "COMPANY_ID"),
+      new Column[String](alias, "COMPANY_NAME")
+    )
   }
 }
 ```

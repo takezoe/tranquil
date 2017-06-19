@@ -82,11 +82,6 @@ object ${objectName.toTermName} {
 }
       """
 
-      // Debug
-      println("==========")
-      println(ret)
-      println("==========")
-
       c.Expr[Any](ret)
     }
 

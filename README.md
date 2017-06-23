@@ -1,4 +1,4 @@
-# Tranquil
+# Tranquil [![Build Status](https://travis-ci.org/takezoe/tranquil.svg?branch=master)](https://travis-ci.org/takezoe/tranquil)
 
 Tranquil is a experiment of type-safe SQL builder for Scala.
 

@@ -68,7 +68,7 @@ Then you can assemble SQL using type-safe DSL.
 
 ```scala
 import com.github.takezoe.tranquil._
-implicit val dialect = new GenericDialect()
+import com.github.takezoe.tranquil.Dialect.generic
 
 val conn: java.sql.Connection = ...
 

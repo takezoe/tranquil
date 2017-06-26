@@ -3,9 +3,9 @@ package com.github.takezoe.tranquil
 import java.sql._
 
 import org.scalatest.FunSuite
+import com.github.takezoe.tranquil.Dialect.generic
 
 class QuerySpec extends FunSuite {
-  implicit val dialect = new GenericDialect()
 
   test("leftJoin"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")

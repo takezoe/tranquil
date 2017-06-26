@@ -25,9 +25,14 @@ trait Dialect {
 
 }
 
-class GenericDialect extends Dialect
+object Dialect {
+  implicit lazy val generic: Dialect = GenericDialect
+  implicit lazy val mysql: Dialect = MySQLDialect
+}
 
-class MySQLDialect extends Dialect {
+object GenericDialect extends Dialect
+
+object MySQLDialect extends Dialect {
 
   override def paginate(sql: String, limit: Option[Int], offset: Option[Int]): String = {
     (limit, offset) match {

@@ -89,12 +89,18 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
   }
 
   def le(value: T)(implicit binder: ColumnBinder[T]): Condition = {
-    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<+", Seq(Param(value, binder)))
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<=", Seq(Param(value, binder)))
   }
 
   def le(query: RunnableQuery[_, T]): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<=", params.params)
+  }
+
+  def in(values: Seq[T])(implicit binder: ColumnBinder[T]): Condition = {
+    val sql = values.map(_ => "?").mkString("(", ",", ")")
+    val params = values.map(value => Param(value, binder))
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "IN", params)
   }
 
   def asc: Sort = {

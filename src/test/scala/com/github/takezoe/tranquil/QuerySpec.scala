@@ -52,6 +52,25 @@ class QuerySpec extends FunSuite {
     }
   }
 
+  test("in"){
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    try {
+      createTables(conn)
+      Users().insert(_.userName -> "user1").execute(conn)
+      Users().insert(_.userName -> "user2").execute(conn)
+      Users().insert(_.userName -> "user3").execute(conn)
+
+      val query = Users("u")
+        .filter(_.userName in Seq("user1", "user2"))
+
+      val result = query.list(conn)
+
+      assert(result.size == 2)
+    } finally {
+      conn.close()
+    }
+  }
+
   test("groupBy"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {

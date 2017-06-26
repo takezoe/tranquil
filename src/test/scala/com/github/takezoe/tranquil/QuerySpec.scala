@@ -3,6 +3,7 @@ package com.github.takezoe.tranquil
 import java.sql._
 
 import org.scalatest.FunSuite
+import Tables._
 
 class QuerySpec extends FunSuite {
 
@@ -182,53 +183,3 @@ class QuerySpec extends FunSuite {
 
 }
 
-case class User(userId: String, userName: String, companyId: Option[Int])
-
-case class Users(
-  alias: Option[String],
-  userId: Column[String],
-  userName: Column[String],
-  companyId: OptionalColumn[Int]
-) extends TableDef[User]("USERS") {
-
-  override def toModel(rs: ResultSet): User = {
-    User(userId.get(rs), userName.get(rs), companyId.get(rs))
-  }
-}
-
-object Users {
-  def apply() = new SingleTableAction[Users](table(None))
-  def apply(alias: String) = new Query[Users, Users, User](table(Some(alias)))
-  private def table(alias: Option[String]) = {
-    new Users(
-      alias,
-      new Column[String](alias, "USER_ID"),
-      new Column[String](alias, "USER_NAME"),
-      new OptionalColumn[Int](alias, "COMPANY_ID")
-    )
-  }
-}
-
-case class Company(companyId: Int, companyName: String)
-
-case class Companies(
-  alias: Option[String],
-  companyId: Column[Int],
-  companyName: Column[String]
-) extends TableDef[Company]("COMPANIES") {
-  override def toModel(rs: ResultSet): Company = {
-    Company(companyId.get(rs), companyName.get(rs))
-  }
-}
-
-object Companies {
-  def apply() = new SingleTableAction[Companies](table(None))
-  def apply(alias: String) = new Query[Companies, Companies, Company](table(Some(alias)))
-  private def table(alias: Option[String]) = {
-    new Companies(
-      alias,
-      new Column[Int](alias, "COMPANY_ID"),
-      new Column[String](alias, "COMPANY_NAME")
-    )
-  }
-}

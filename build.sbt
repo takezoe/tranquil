@@ -7,9 +7,13 @@ version := "0.0.3-SNAPSHOT"
 scalaVersion := "2.12.1"
 
 libraryDependencies ++= Seq(
+  "org.scala-lang" % "scala-reflect" % "2.12.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.h2database" % "h2" % "1.4.192" % "test"
 )
+
+resolvers += Resolver.sonatypeRepo("releases")
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 publishMavenStyle := true
 

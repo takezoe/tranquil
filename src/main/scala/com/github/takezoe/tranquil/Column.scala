@@ -103,6 +103,11 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "IN", params)
   }
 
+  def in(query: RunnableQuery[_, T]): Condition = {
+    val (sql, params) = query.selectStatement()
+    Condition(SimpleColumnTerm(this), Some(QueryTerm("(" + sql + ")")), "IN", params.params)
+  }
+
   def asc: Sort = {
     Sort(s"${fullName} ASC")
   }

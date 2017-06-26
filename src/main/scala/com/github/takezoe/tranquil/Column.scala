@@ -27,7 +27,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "=", Seq(Param(value, binder)))
   }
 
-  def eq(query: RunnableQuery[_, T]): Condition = {
+  def eq(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "=", params.params)
   }
@@ -40,7 +40,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<>", Seq(Param(value, binder)))
   }
 
-  def ne(query: RunnableQuery[_, T]): Condition = {
+  def ne(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<>", params.params)
   }
@@ -53,7 +53,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), ">", Seq(Param(value, binder)))
   }
 
-  def gt(query: RunnableQuery[_, T]): Condition = {
+  def gt(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), ">", params.params)
   }
@@ -66,7 +66,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), ">=", Seq(Param(value, binder)))
   }
 
-  def ge(query: RunnableQuery[_, T]): Condition = {
+  def ge(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), ">=", params.params)
   }
@@ -79,7 +79,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<", Seq(Param(value, binder)))
   }
 
-  def lt(query: RunnableQuery[_, T]): Condition = {
+  def lt(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<", params.params)
   }
@@ -92,7 +92,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "<=", Seq(Param(value, binder)))
   }
 
-  def le(query: RunnableQuery[_, T]): Condition = {
+  def le(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "<=", params.params)
   }
@@ -103,7 +103,7 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "IN", params)
   }
 
-  def in(query: RunnableQuery[_, T]): Condition = {
+  def in(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
     val (sql, params) = query.selectStatement()
     Condition(SimpleColumnTerm(this), Some(QueryTerm("(" + sql + ")")), "IN", params.params)
   }
@@ -131,6 +131,10 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
   def min: GroupingColumn[Long, Long] = {
     GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})", asName + "_MIN"), false)
   }
+
+  def avg: GroupingColumn[Double, Double] = {
+    GroupingColumn(new FunctionColumn[Double](alias, columnName, s"AVG(${fullName})", asName + "_AVG"), false)
+  }
 }
 
 /**
@@ -138,6 +142,13 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
  */
 class Column[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
   extends ColumnBase[T, T](alias, columnName)(binder){
+
+  def toLowerCase: Column[T] = {
+    new FunctionColumn[T](alias, columnName, s"LOWER(${fullName})", asName)
+  }
+  def toUpperCase: Column[T] = {
+    new FunctionColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
+  }
 
   override protected[tranquil] def lift(query: Query[_, _, _]) = {
     if(query.columns.contains(this)){
@@ -156,6 +167,13 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
  */
 class OptionalColumn[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
   extends ColumnBase[T, Option[T]](alias, columnName)(new OptionalColumnBinder[T](binder)){
+
+  def toLowerCase: OptionalColumn[T] = {
+    new FunctionOptionalColumn[T](alias, columnName, s"LOWER(${fullName})", asName)
+  }
+  def toUpperCase: OptionalColumn[T] = {
+    new FunctionOptionalColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
+  }
 
   def isNull(column: ColumnBase[T, _]): Condition = {
     Condition(SimpleColumnTerm(this), None, "IS NULL")
@@ -194,6 +212,15 @@ class FunctionColumn[T](alias: Option[String], columnName: String, select: Strin
     // TODO Are columnName and name necessary?
     new FunctionColumn[T](Some(alias), "** columnName **", asName, "** name **").asInstanceOf[this.type]
   }
+}
+
+/**
+ * Represent function call for a nullable column
+ */
+class FunctionOptionalColumn[T](alias: Option[String], columnName: String, select: String, name: String)
+                               (implicit binder: ColumnBinder[T]) extends OptionalColumn[T](alias, columnName)(binder) {
+  override val asName = name
+  override val fullName = select
 }
 
 /**

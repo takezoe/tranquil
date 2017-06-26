@@ -5,6 +5,7 @@ import java.sql._
 import org.scalatest.FunSuite
 
 class QuerySpec extends FunSuite {
+  implicit val dialect = new GenericDialect()
 
   test("leftJoin"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
@@ -150,6 +151,24 @@ class QuerySpec extends FunSuite {
         .list(conn)
 
       assert(results == Seq(((User("1", "employee1", Some(1)), Company(1, "BizReach")), Some((1, "BizReach")))))
+    } finally {
+      conn.close()
+    }
+  }
+
+  test("dialect function"){
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    try {
+      createTables(conn)
+      Users().insert(u => (u.userName -> "takezoe")).execute(conn)
+
+      val query = Users("u")
+        .filter(_.userName.toUpperCase eq "TAKEZOE")
+        .map(_.userName.toUpperCase)
+
+      val result = query.list(conn)
+
+      assert(result == Seq("TAKEZOE"))
     } finally {
       conn.close()
     }

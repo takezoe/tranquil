@@ -12,7 +12,7 @@ trait RunnableQuery[T, R] {
   protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R]
   protected[tranquil] val definitions: T
 
-  def count(conn: Connection): Int = {
+  def count(conn: Connection)(implicit dialect: Dialect): Int = {
     val (sql: String, bindParams: BindParams) = underlying._selectStatement(select = Some("COUNT(*) AS COUNT"))
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
@@ -23,7 +23,7 @@ trait RunnableQuery[T, R] {
     }
   }
 
-  def list(conn: Connection): Seq[R] = {
+  def list(conn: Connection)(implicit dialect: Dialect): Seq[R] = {
     val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
@@ -37,13 +37,13 @@ trait RunnableQuery[T, R] {
     }
   }
 
-  def first(conn: Connection): R = {
+  def first(conn: Connection)(implicit dialect: Dialect): R = {
     firstOption(conn).getOrElse {
       throw new NoSuchElementException()
     }
   }
 
-  def firstOption(conn: Connection): Option[R] = {
+  def firstOption(conn: Connection)(implicit dialect: Dialect): Option[R] = {
     val (sql, bindParams) = underlying.selectStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
@@ -57,7 +57,7 @@ trait RunnableQuery[T, R] {
     }
   }
 
-  def selectStatement(): (String, BindParams)
+  def selectStatement()(implicit dialect: Dialect): (String, BindParams)
 
 }
 
@@ -69,7 +69,7 @@ class MappedQuery[T, R](
 ) extends RunnableQuery[T, R] {
 
   override protected[tranquil] val definitions: T = underlying.definitions
-  override def selectStatement(): (String, BindParams) = underlying.selectStatement()
+  override def selectStatement()(implicit dialect: Dialect): (String, BindParams) = underlying.selectStatement()
 }
 
 class GroupingQuery[T, R](
@@ -77,7 +77,7 @@ class GroupingQuery[T, R](
   protected[tranquil] val definitions: T
 ) extends RunnableQuery[T, R] {
 
-  override def selectStatement(): (String, BindParams) = underlying.selectStatement()
+  override def selectStatement()(implicit dialect: Dialect): (String, BindParams) = underlying.selectStatement()
 
   def filter(condition: T => Condition): GroupingQuery[T, R] = {
     new GroupingQuery(
@@ -95,7 +95,7 @@ class WrappedQuery[T, R](
   private[tranquil] val query: RunnableQuery[T, R]
 )(implicit val shape: TableShape[T]) extends RunnableQuery[T, R] {
 
-  override def selectStatement(): (String, BindParams) = query.selectStatement()
+  override def selectStatement()(implicit dialect: Dialect): (String, BindParams) = query.selectStatement()
   override protected[tranquil] val underlying: Query[_ <: TableDef[_], T, R] = query.underlying
   override protected[tranquil] val definitions: T = shape.wrap(alias).definitions
 }
@@ -304,14 +304,14 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  override def selectStatement(): (String, BindParams) = {
+  override def selectStatement()(implicit dialect: Dialect): (String, BindParams) = {
     _selectStatement()
   }
 
   private[tranquil] def _selectStatement(
     bindParams: BindParams = new BindParams(),
     select: Option[String] = None
-  ): (String, BindParams) = {
+  )(implicit dialect: Dialect): (String, BindParams) = {
 
     val sb = new StringBuilder()
     sb.append("SELECT ")
@@ -407,14 +407,14 @@ class Query[B <: TableDef[_], T, R](
       sb.append(sorts.map(_.sql).mkString(", "))
     }
 
-    limit.foreach { limit =>
-      sb.append(" LIMIT ").append(limit)
-    }
-    offset.foreach { offset =>
-      sb.append(" OFFSET ").append(offset)
-    }
+//    limit.foreach { limit =>
+//      sb.append(" LIMIT ").append(limit)
+//    }
+//    offset.foreach { offset =>
+//      sb.append(" OFFSET ").append(offset)
+//    }
 
-    (sb.toString(), bindParams)
+    (dialect.paginate(sb.toString, limit, offset), bindParams)
   }
 
 }

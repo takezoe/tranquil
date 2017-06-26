@@ -10,6 +10,7 @@ At first, ready table definitions like following:
 
 ```scala
 import com.github.takezoe.tranquil._
+import java.sql.ResultSet
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
@@ -66,6 +67,9 @@ object Companies {
 Then you can assemble SQL using type-safe DSL.
 
 ```scala
+import com.github.takezoe.tranquil._
+import com.github.takezoe.tranquil.Dialect.generic
+
 val conn: java.sql.Connection = ...
 
 // SELECT

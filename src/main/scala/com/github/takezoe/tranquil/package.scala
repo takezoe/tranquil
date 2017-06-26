@@ -31,6 +31,12 @@ package object tranquil {
     override def get(name: String, rs: ResultSet): Long = rs.getLong(name)
   }
 
+  implicit val doubleBinder = new ColumnBinder[Double]{
+    override val jdbcType: Int = Types.DOUBLE
+    override def set(value: Double, stmt: PreparedStatement, i: Int): Unit = stmt.setDouble(i + 1, value)
+    override def get(name: String, rs: ResultSet): Double = rs.getDouble(name)
+  }
+
   implicit val booleanBinder = new ColumnBinder[Boolean]{
     override val jdbcType: Int = Types.BOOLEAN
     override def set(value: Boolean, stmt: PreparedStatement, i: Int): Unit = stmt.setBoolean(i + 1, value)

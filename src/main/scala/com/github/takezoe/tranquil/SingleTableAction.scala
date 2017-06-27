@@ -1,10 +1,10 @@
 package com.github.takezoe.tranquil
 
-import java.sql.Connection
+import java.sql.{Connection, Statement}
 
 class SingleTableAction[B <: TableDef[_]](base: B){
 
-  def insert(updateColumns: B => UpdateColumn): InsertAction = {
+  def insert(updateColumns: B => UpdateColumn): InsertAction[B] = {
     new InsertAction(base, updateColumns(base))
   }
 
@@ -18,7 +18,7 @@ class SingleTableAction[B <: TableDef[_]](base: B){
 
 }
 
-class InsertAction(tableDef: TableDef[_], updateColumn: UpdateColumn){
+class InsertAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn){
 
   def insertStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
@@ -34,11 +34,31 @@ class InsertAction(tableDef: TableDef[_], updateColumn: UpdateColumn){
     (sb.toString, bindParams)
   }
 
+  def returningId: ReturningInsertAction = {
+    new ReturningInsertAction(this)
+  }
+
   def execute(conn: Connection): Int = {
     val (sql, bindParams) = insertStatement()
     using(conn.prepareStatement(sql)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       stmt.executeUpdate()
+    }
+  }
+
+}
+
+class ReturningInsertAction(insertAction: InsertAction[_]){
+
+  def execute(conn: Connection): Long = {
+    val (sql, bindParams) = insertAction.insertStatement()
+    using(conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      stmt.executeUpdate()
+      using(stmt.getGeneratedKeys()){ rs =>
+        rs.next()
+        rs.getLong(1)
+      }
     }
   }
 

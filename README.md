@@ -3,6 +3,8 @@
 Tranquil is a experiment of type-safe SQL builder for Scala.
 
 ```scala
+resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
 libraryDependencies += "com.github.takezoe" %% "tranquil" % "0.0.3-SNAPSHOT"
 ```
 

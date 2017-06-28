@@ -5,13 +5,11 @@ import java.sql.{PreparedStatement, ResultSet}
 /**
  * Define basic functionality of the column model
  */
-abstract class ColumnBase[T, S](val alias: Option[String], val columnName: String)
+abstract sealed class ColumnBase[T, S](val alias: Option[String], val columnName: String)
                                (implicit val binder: ColumnBinder[S]){
 
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
   val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
-
-  protected[tranquil] def lift(query: Query[_, _, _]): ColumnBase[T, S]
 
   def wrap(alias: String): this.type
 
@@ -150,17 +148,21 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
     new FunctionColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
   }
 
-  override protected[tranquil] def lift(query: Query[_, _, _]) = {
-    if(query.columns.contains(this)){
-      new Column[T](query.alias, asName)
-    } else this
-  }
-
   override def wrap(alias: String): Column.this.type = {
     new Column[T](Some(alias), asName).asInstanceOf[this.type]
   }
 }
 
+/**
+ * Represent an auto incremented column
+ */
+class AutoIncrementColumn(alias: Option[String], columnName: String)
+  extends Column[Long](alias, columnName)(longBinder){
+
+  override def wrap(alias: String): AutoIncrementColumn.this.type = {
+    new AutoIncrementColumn(Some(alias), asName).asInstanceOf[this.type]
+  }
+}
 
 /**
  * Represent a nullable column
@@ -187,12 +189,6 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
       }
       override def get(name: String, rs: ResultSet): T = ???
     })))
-  }
-
-  override protected[tranquil] def lift(query: Query[_, _, _]) = {
-    if(query.columns.contains(this)){
-      new OptionalColumn[T](query.alias, asName)
-    } else this
   }
 
   override def wrap(alias: String): OptionalColumn.this.type = {

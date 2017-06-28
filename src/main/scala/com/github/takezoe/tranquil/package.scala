@@ -208,5 +208,7 @@ package object tranquil {
   implicit def column4ShapeOf[T1, T2, T3, T4]: TableShapeOf[Column4[T1, T2, T3, T4]] = (table: Column4[T1, T2, T3, T4]) => new Column4Shape[T1, T2, T3, T4](table)
   implicit def column5ShapeOf[T1, T2, T3, T4, T5]: TableShapeOf[Column5[T1, T2, T3, T4, T5]] = (table: Column5[T1, T2, T3, T4, T5]) => new Column5Shape[T1, T2, T3, T4, T5](table)
 
+  val Auto: Long = 0
+
 }
 

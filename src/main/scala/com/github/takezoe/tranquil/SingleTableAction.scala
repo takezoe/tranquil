@@ -2,10 +2,18 @@ package com.github.takezoe.tranquil
 
 import java.sql.{Connection, Statement}
 
-class SingleTableAction[B <: TableDef[_]](base: B){
+class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
 
   def insert(updateColumns: B => UpdateColumn): InsertAction[B] = {
     new InsertAction(base, updateColumns(base))
+  }
+
+  def insert(model: R): InsertAction[B] = {
+    val columns = base.columns.zip(base.fromModel(model)).collect {
+      case (column, value) if !column.isInstanceOf[AutoIncrementColumn] =>
+        (column, Param(value, column.binder.asInstanceOf[ColumnBinder[Any]]))
+    }
+    new InsertAction(base, UpdateColumn(columns.map(_._1), columns.map(_._2)))
   }
 
   def update(updateColumns: B => UpdateColumn): UpdateAction[B] = {

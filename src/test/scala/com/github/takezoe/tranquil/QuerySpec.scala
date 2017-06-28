@@ -37,8 +37,8 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(_.userName -> "takezoe").execute(conn)
-      Users().insert(_.userName -> "n.takezoe").execute(conn)
+      Users().insert(User(Auto, "takezoe", None)).execute(conn)
+      Users().insert(User(Auto, "n.takezoe", None)).execute(conn)
 
       val query = Users("u")
         .filter(_.userName eq "takezoe")
@@ -47,7 +47,7 @@ class QuerySpec extends FunSuite {
       val result = query.list(conn)
 
       assert(result.size == 1)
-      assert(result == Seq((User("1", "takezoe", None), None)))
+      assert(result == Seq((User(1, "takezoe", None), None)))
     } finally {
       conn.close()
     }
@@ -125,7 +125,7 @@ class QuerySpec extends FunSuite {
         ))
         .list(conn)
 
-      assert(results == Seq(User("1", "employee1", Some(1))))
+      assert(results == Seq(User(1, "employee1", Some(1))))
     } finally {
       conn.close()
     }
@@ -150,7 +150,7 @@ class QuerySpec extends FunSuite {
         .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
         .list(conn)
 
-      assert(results == Seq(((User("1", "employee1", Some(1)), Company(1, "BizReach")), Some((1, "BizReach")))))
+      assert(results == Seq(((User(1, "employee1", Some(1)), Company(1, "BizReach")), Some((1, "BizReach")))))
     } finally {
       conn.close()
     }
@@ -216,52 +216,58 @@ class QuerySpec extends FunSuite {
 
 }
 
-case class User(userId: String, userName: String, companyId: Option[Int])
+case class User(userId: Long, userName: String, companyId: Option[Long])
 
 case class Users(
   alias: Option[String],
-  userId: Column[String],
+  userId: AutoIncrementColumn,
   userName: Column[String],
-  companyId: OptionalColumn[Int]
+  companyId: OptionalColumn[Long]
 ) extends TableDef[User]("USERS") {
 
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
+  override def fromModel(model: User): Seq[Any] = {
+    Seq(model.userId, model.userName, model.companyId)
+  }
 }
 
 object Users {
-  def apply() = new SingleTableAction[Users](table(None))
+  def apply() = new SingleTableAction[Users, User](table(None))
   def apply(alias: String) = new Query[Users, Users, User](table(Some(alias)))
   private def table(alias: Option[String]) = {
     new Users(
       alias,
-      new Column[String](alias, "USER_ID"),
+      new AutoIncrementColumn(alias, "USER_ID"),
       new Column[String](alias, "USER_NAME"),
-      new OptionalColumn[Int](alias, "COMPANY_ID")
+      new OptionalColumn[Long](alias, "COMPANY_ID")
     )
   }
 }
 
-case class Company(companyId: Int, companyName: String)
+case class Company(companyId: Long, companyName: String)
 
 case class Companies(
   alias: Option[String],
-  companyId: Column[Int],
+  companyId: AutoIncrementColumn,
   companyName: Column[String]
 ) extends TableDef[Company]("COMPANIES") {
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
   }
+  override def fromModel(model: Company): Seq[Any] = {
+    Seq(model.companyId, model.companyName)
+  }
 }
 
 object Companies {
-  def apply() = new SingleTableAction[Companies](table(None))
+  def apply() = new SingleTableAction[Companies, Company](table(None))
   def apply(alias: String) = new Query[Companies, Companies, Company](table(Some(alias)))
   private def table(alias: Option[String]) = {
     new Companies(
       alias,
-      new Column[Int](alias, "COMPANY_ID"),
+      new AutoIncrementColumn(alias, "COMPANY_ID"),
       new Column[String](alias, "COMPANY_NAME")
     )
   }

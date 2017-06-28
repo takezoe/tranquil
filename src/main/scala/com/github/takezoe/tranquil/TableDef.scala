@@ -15,6 +15,7 @@ abstract class TableDef[R](val tableName: String) extends Product {
     constructor.newInstance(Option(alias) +: cols.map(_.wrap(alias)): _*).asInstanceOf[this.type]
   }
   def toModel(rs: ResultSet): R
+  def fromModel(model: R): Seq[Any]
 }
 
 abstract class TableShape[T](table: T){

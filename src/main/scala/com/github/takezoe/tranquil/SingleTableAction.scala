@@ -34,24 +34,8 @@ class InsertAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn){
     (sb.toString, bindParams)
   }
 
-  def returningId: ReturningInsertAction = {
-    new ReturningInsertAction(this)
-  }
-
-  def execute(conn: Connection): Int = {
+  def executeAndReturnGeneratedId(conn: Connection): Long = {
     val (sql, bindParams) = insertStatement()
-    using(conn.prepareStatement(sql)){ stmt =>
-      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
-      stmt.executeUpdate()
-    }
-  }
-
-}
-
-class ReturningInsertAction(insertAction: InsertAction[_]){
-
-  def execute(conn: Connection): Long = {
-    val (sql, bindParams) = insertAction.insertStatement()
     using(conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){ stmt =>
       bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
       stmt.executeUpdate()
@@ -59,6 +43,14 @@ class ReturningInsertAction(insertAction: InsertAction[_]){
         rs.next()
         rs.getLong(1)
       }
+    }
+  }
+
+  def execute(conn: Connection): Int = {
+    val (sql, bindParams) = insertStatement()
+    using(conn.prepareStatement(sql)){ stmt =>
+      bindParams.params.zipWithIndex.foreach { case (param, i) => param.set(stmt, i) }
+      stmt.executeUpdate()
     }
   }
 

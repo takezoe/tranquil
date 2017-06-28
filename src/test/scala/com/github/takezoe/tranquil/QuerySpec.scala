@@ -178,8 +178,8 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      val id1 = Users().insert(_.userName -> "user1").returningId.execute(conn)
-      val id2 = Users().insert(_.userName -> "user2").returningId.execute(conn)
+      val id1 = Users().insert(_.userName -> "user1").executeAndReturnGeneratedId(conn)
+      val id2 = Users().insert(_.userName -> "user2").executeAndReturnGeneratedId(conn)
 
       assert(id1 == 1)
       assert(id2 == 2)

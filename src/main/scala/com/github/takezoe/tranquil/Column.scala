@@ -11,8 +11,6 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
   val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
 
-  protected[tranquil] def lift(query: Query[_, _, _]): ColumnBase[T, S]
-
   def wrap(alias: String): this.type
 
   def get(rs: ResultSet): S = {
@@ -150,12 +148,6 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
     new FunctionColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
   }
 
-  override protected[tranquil] def lift(query: Query[_, _, _]) = {
-    if(query.columns.contains(this)){
-      new Column[T](query.alias, asName)
-    } else this
-  }
-
   override def wrap(alias: String): Column.this.type = {
     new Column[T](Some(alias), asName).asInstanceOf[this.type]
   }
@@ -187,12 +179,6 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
       }
       override def get(name: String, rs: ResultSet): T = ???
     })))
-  }
-
-  override protected[tranquil] def lift(query: Query[_, _, _]) = {
-    if(query.columns.contains(this)){
-      new OptionalColumn[T](query.alias, asName)
-    } else this
   }
 
   override def wrap(alias: String): OptionalColumn.this.type = {

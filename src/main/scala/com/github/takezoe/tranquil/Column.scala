@@ -17,6 +17,25 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
     binder.get(asName, rs)
   }
 
+  def startsWith(value: String): Condition = {
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "LIKE",
+      Seq(Param(escape(value) + "%", binder.asInstanceOf[ColumnBinder[String]])))
+  }
+
+  def endsWith(value: String): Condition = {
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "LIKE",
+      Seq(Param("%" + escape(value), binder.asInstanceOf[ColumnBinder[String]])))
+  }
+
+  def contains(value: String): Condition = {
+    Condition(SimpleColumnTerm(this), Some(PlaceHolderTerm()), "LIKE",
+      Seq(Param("%" + escape(value) + "%", binder.asInstanceOf[ColumnBinder[String]])))
+  }
+
+  private def escape(value: String): String = {
+    value.replace("\\", "\\\\").replace("_", "\\_").replace("%", "\\%")
+  }
+
   def eq(column: ColumnBase[T, _]): Condition = {
     Condition(SimpleColumnTerm(this), Some(SimpleColumnTerm(column)), "=", Nil)
   }

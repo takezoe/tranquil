@@ -37,8 +37,8 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(User(Default, "takezoe", None)).execute(conn)
-      Users().insert(User(Default, "n.takezoe", None)).execute(conn)
+      Users().insert(User(Default[Long], "takezoe", None)).execute(conn)
+      Users().insert(User(Default[Long], "n.takezoe", None)).execute(conn)
 
       val query = Users("u")
         .filter(_.userName eq "takezoe")

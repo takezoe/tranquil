@@ -10,8 +10,7 @@ class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
 
   def insert(model: R): InsertAction[B] = {
     val columns = base.columns.zip(base.fromModel(model)).collect {
-      case (column, value) if !column.isInstanceOf[AutoIncrementColumn] =>
-        (column, Param(value, column.binder.asInstanceOf[ColumnBinder[Any]]))
+      case (column, value) if !column.auto => (column, Param(value, column.binder.asInstanceOf[ColumnBinder[Any]]))
     }
     new InsertAction(base, UpdateColumn(columns.map(_._1), columns.map(_._2)))
   }

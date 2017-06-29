@@ -208,7 +208,14 @@ package object tranquil {
   implicit def column4ShapeOf[T1, T2, T3, T4]: TableShapeOf[Column4[T1, T2, T3, T4]] = (table: Column4[T1, T2, T3, T4]) => new Column4Shape[T1, T2, T3, T4](table)
   implicit def column5ShapeOf[T1, T2, T3, T4, T5]: TableShapeOf[Column5[T1, T2, T3, T4, T5]] = (table: Column5[T1, T2, T3, T4, T5]) => new Column5Shape[T1, T2, T3, T4, T5](table)
 
-  val Auto: Long = 0
+  trait DefaultValue[T] { def value: T }
+  implicit object LongDefaultValue    extends DefaultValue[Long]    { def value = 0 }
+  implicit object IntDefaultValue     extends DefaultValue[Int]     { def value = 0 }
+  implicit object DoubleDefaultValue  extends DefaultValue[Double]  { def value = 0.0 }
+  implicit object BooleanDefaultValue extends DefaultValue[Boolean] { def value = false }
+  implicit object StringDefaultValue  extends DefaultValue[String]  { def value = "" }
+
+  def Default[T](implicit defaultValue: DefaultValue[T]): T = defaultValue.value
 
 }
 

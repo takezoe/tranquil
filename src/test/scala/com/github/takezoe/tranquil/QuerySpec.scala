@@ -37,8 +37,8 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(User(Auto, "takezoe", None)).execute(conn)
-      Users().insert(User(Auto, "n.takezoe", None)).execute(conn)
+      Users().insert(User(Default, "takezoe", None)).execute(conn)
+      Users().insert(User(Default, "n.takezoe", None)).execute(conn)
 
       val query = Users("u")
         .filter(_.userName eq "takezoe")
@@ -220,7 +220,7 @@ case class User(userId: Long, userName: String, companyId: Option[Long])
 
 case class Users(
   alias: Option[String],
-  userId: AutoIncrementColumn,
+  userId: Column[Long],
   userName: Column[String],
   companyId: OptionalColumn[Long]
 ) extends TableDef[User]("USERS") {
@@ -239,7 +239,7 @@ object Users {
   private def table(alias: Option[String]) = {
     new Users(
       alias,
-      new AutoIncrementColumn(alias, "USER_ID"),
+      new Column[Long](alias, "USER_ID", true),
       new Column[String](alias, "USER_NAME"),
       new OptionalColumn[Long](alias, "COMPANY_ID")
     )
@@ -250,7 +250,7 @@ case class Company(companyId: Long, companyName: String)
 
 case class Companies(
   alias: Option[String],
-  companyId: AutoIncrementColumn,
+  companyId: Column[Long],
   companyName: Column[String]
 ) extends TableDef[Company]("COMPANIES") {
   override def toModel(rs: ResultSet): Company = {
@@ -267,7 +267,7 @@ object Companies {
   private def table(alias: Option[String]) = {
     new Companies(
       alias,
-      new AutoIncrementColumn(alias, "COMPANY_ID"),
+      new Column[Long](alias, "COMPANY_ID", true),
       new Column[String](alias, "COMPANY_NAME")
     )
   }

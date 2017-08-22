@@ -5,7 +5,7 @@ import java.sql.{PreparedStatement, ResultSet}
 /**
  * Define basic functionality of the column model
  */
-abstract class ColumnBase[T, S](val alias: Option[String], val columnName: String)
+abstract sealed class ColumnBase[T, S](val alias: Option[String], val columnName: String, val auto: Boolean = false)
                                (implicit val binder: ColumnBinder[S]){
 
   val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
@@ -157,8 +157,8 @@ abstract class ColumnBase[T, S](val alias: Option[String], val columnName: Strin
 /**
  * Represent a non-null column
  */
-class Column[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
-  extends ColumnBase[T, T](alias, columnName)(binder){
+class Column[T](alias: Option[String], columnName: String, auto: Boolean = false)(implicit binder: ColumnBinder[T])
+  extends ColumnBase[T, T](alias, columnName, auto)(binder){
 
   def toLowerCase: Column[T] = {
     new FunctionColumn[T](alias, columnName, s"LOWER(${fullName})", asName)
@@ -172,6 +172,16 @@ class Column[T](alias: Option[String], columnName: String)(implicit binder: Colu
   }
 }
 
+///**
+// * Represent an auto incremented column
+// */
+//class AutoIncrementColumn(alias: Option[String], columnName: String)
+//  extends Column[Long](alias, columnName)(longBinder){
+//
+//  override def wrap(alias: String): AutoIncrementColumn.this.type = {
+//    new AutoIncrementColumn(Some(alias), asName).asInstanceOf[this.type]
+//  }
+//}
 
 /**
  * Represent a nullable column

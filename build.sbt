@@ -4,7 +4,7 @@ organization := "com.github.takezoe"
 
 version := "0.0.3-SNAPSHOT"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.3"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",

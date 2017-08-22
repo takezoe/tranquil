@@ -196,16 +196,16 @@ class QuerySpec extends FunSuite {
       Users().insert(_.userName -> "tak_zoe").execute(conn)
 
       val results1 = Users("u").filter(_.userName.startsWith("tak")).list(conn)
-      assert(results1 == Seq(User("1", "takezoe", None), User("2", "tak_zoe", None)))
+      assert(results1 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
       val results2 = Users("u").filter(_.userName.endsWith("zoe")).list(conn)
-      assert(results2 == Seq(User("1", "takezoe", None), User("2", "tak_zoe", None)))
+      assert(results2 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
       val results3 = Users("u").filter(_.userName.contains("kez")).list(conn)
-      assert(results3 == Seq(User("1", "takezoe", None)))
+      assert(results3 == Seq(User(1, "takezoe", None)))
 
       val results4= Users("u").filter(_.userName.contains("k_z")).list(conn)
-      assert(results4 == Seq(User("2", "tak_zoe", None)))
+      assert(results4 == Seq(User(2, "tak_zoe", None)))
 
     } finally {
       conn.close()

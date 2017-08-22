@@ -175,7 +175,7 @@ class Query[B <: TableDef[_], T, R](
     ))
   }
 
-  def innerJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+  def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
     new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
@@ -209,7 +209,7 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[T2 <: TableDef[R2], R2](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+  def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
     new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,

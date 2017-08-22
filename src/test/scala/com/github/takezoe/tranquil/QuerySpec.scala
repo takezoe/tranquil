@@ -251,9 +251,6 @@ case class Users(
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
   }
-  override def fromModel(model: User): Seq[Any] = {
-    Seq(model.userId, model.userName, model.companyId)
-  }
 }
 
 object Users {
@@ -278,9 +275,6 @@ case class Companies(
 ) extends TableDef[Company]("COMPANIES") {
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
-  }
-  override def fromModel(model: Company): Seq[Any] = {
-    Seq(model.companyId, model.companyName)
   }
 }
 

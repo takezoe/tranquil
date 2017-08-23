@@ -5,16 +5,17 @@ import java.sql.{PreparedStatement, ResultSet}
 /**
  * Define basic functionality of the column model
  */
-abstract sealed class ColumnBase[T, S](val alias: Option[String], val columnName: String, val auto: Boolean = false)
+abstract sealed class ColumnBase[T, S](val tableDef: TableDef[_], val columnName: String, val auto: Boolean = false)
                                (implicit val binder: ColumnBinder[S]){
 
-  val fullName = alias.map { x => x + "." + columnName } getOrElse columnName
-  val asName   = alias.map { x => x + "_" + columnName } getOrElse columnName
+  val localName = tableDef.prefix.map { _ + columnName} getOrElse columnName
+  val fullName  = tableDef.alias.map { x => x + "." + localName } getOrElse localName
+  val aliasName = tableDef.alias.map { x => x + "_" + localName } getOrElse localName
 
   def wrap(alias: String): this.type
 
   def get(rs: ResultSet): S = {
-    binder.get(asName, rs)
+    binder.get(aliasName, rs)
   }
 
   def startsWith(value: String): Condition = {
@@ -138,37 +139,37 @@ abstract sealed class ColumnBase[T, S](val alias: Option[String], val columnName
   }
 
   def count: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"COUNT(${fullName})", asName + "_COUNT"), false)
+    GroupingColumn(new FunctionColumn[Long](tableDef, columnName, s"COUNT(${fullName})", aliasName + "_COUNT"), false)
   }
 
   def max: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MAX(${fullName})", asName + "_MAX"), false)
+    GroupingColumn(new FunctionColumn[Long](tableDef, columnName, s"MAX(${fullName})", aliasName + "_MAX"), false)
   }
 
   def min: GroupingColumn[Long, Long] = {
-    GroupingColumn(new FunctionColumn[Long](alias, columnName, s"MIN(${fullName})", asName + "_MIN"), false)
+    GroupingColumn(new FunctionColumn[Long](tableDef, columnName, s"MIN(${fullName})", aliasName + "_MIN"), false)
   }
 
   def avg: GroupingColumn[Double, Double] = {
-    GroupingColumn(new FunctionColumn[Double](alias, columnName, s"AVG(${fullName})", asName + "_AVG"), false)
+    GroupingColumn(new FunctionColumn[Double](tableDef, columnName, s"AVG(${fullName})", aliasName + "_AVG"), false)
   }
 }
 
 /**
  * Represent a non-null column
  */
-class Column[T](alias: Option[String], columnName: String, auto: Boolean = false)(implicit binder: ColumnBinder[T])
-  extends ColumnBase[T, T](alias, columnName, auto)(binder){
+class Column[T](tableDef: TableDef[_], columnName: String, auto: Boolean = false)(implicit binder: ColumnBinder[T])
+  extends ColumnBase[T, T](tableDef, columnName, auto)(binder){
 
   def toLowerCase: Column[T] = {
-    new FunctionColumn[T](alias, columnName, s"LOWER(${fullName})", asName)
+    new FunctionColumn[T](tableDef, columnName, s"LOWER(${fullName})", aliasName)
   }
   def toUpperCase: Column[T] = {
-    new FunctionColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
+    new FunctionColumn[T](tableDef, columnName, s"UPPER(${fullName})", aliasName)
   }
 
   override def wrap(alias: String): Column.this.type = {
-    new Column[T](Some(alias), asName).asInstanceOf[this.type]
+    new Column[T](tableDef.wrap(alias), columnName).asInstanceOf[this.type]
   }
 }
 
@@ -186,14 +187,14 @@ class Column[T](alias: Option[String], columnName: String, auto: Boolean = false
 /**
  * Represent a nullable column
  */
-class OptionalColumn[T](alias: Option[String], columnName: String)(implicit binder: ColumnBinder[T])
-  extends ColumnBase[T, Option[T]](alias, columnName)(new OptionalColumnBinder[T](binder)){
+class OptionalColumn[T](tableDef: TableDef[_], columnName: String)(implicit binder: ColumnBinder[T])
+  extends ColumnBase[T, Option[T]](tableDef, columnName)(new OptionalColumnBinder[T](binder)){
 
   def toLowerCase: OptionalColumn[T] = {
-    new FunctionOptionalColumn[T](alias, columnName, s"LOWER(${fullName})", asName)
+    new FunctionOptionalColumn[T](tableDef, columnName, s"LOWER(${fullName})", columnName)
   }
   def toUpperCase: OptionalColumn[T] = {
-    new FunctionOptionalColumn[T](alias, columnName, s"UPPER(${fullName})", asName)
+    new FunctionOptionalColumn[T](tableDef, columnName, s"UPPER(${fullName})", columnName)
   }
 
   def isNull(column: ColumnBase[T, _]): Condition = {
@@ -211,31 +212,33 @@ class OptionalColumn[T](alias: Option[String], columnName: String)(implicit bind
   }
 
   override def wrap(alias: String): OptionalColumn.this.type = {
-    new OptionalColumn[T](Some(alias), asName).asInstanceOf[this.type]
+    new OptionalColumn[T](tableDef.wrap(alias), columnName).asInstanceOf[this.type]
   }
 }
 
 /**
  * Represent function call
  */
-class FunctionColumn[T](alias: Option[String], columnName: String, select: String, name: String)
-                       (implicit binder: ColumnBinder[T]) extends Column[T](alias, columnName)(binder){
-  override val asName = name
-  override val fullName = select
+class FunctionColumn[T](tableDef: TableDef[_], columnName: String, select: String, name: String)
+                       (implicit binder: ColumnBinder[T]) extends Column[T](tableDef, columnName)(binder){
+  override val aliasName = name
+  override val fullName  = select
 
   override def wrap(alias: String): FunctionColumn.this.type = {
-    // TODO Are columnName and name necessary?
-    new FunctionColumn[T](Some(alias), "** columnName **", asName, "** name **").asInstanceOf[this.type]
+    new FunctionColumn[T](tableDef.wrap(alias), "** columnName **", columnName, "** name **").asInstanceOf[this.type]
   }
 }
 
 /**
  * Represent function call for a nullable column
  */
-class FunctionOptionalColumn[T](alias: Option[String], columnName: String, select: String, name: String)
-                               (implicit binder: ColumnBinder[T]) extends OptionalColumn[T](alias, columnName)(binder) {
-  override val asName = name
-  override val fullName = select
+class FunctionOptionalColumn[T](tableDef: TableDef[_], columnName: String, select: String, name: String)
+                               (implicit binder: ColumnBinder[T])
+  extends OptionalColumn[T](tableDef, columnName)(binder) {
+
+  override val aliasName = name
+  override val fullName  = select
+
 }
 
 /**

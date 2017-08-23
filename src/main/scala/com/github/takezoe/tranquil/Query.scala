@@ -214,7 +214,7 @@ class Query[B <: TableDef[_], T, R](
       base        = base,
       columns     = columns,
       definitions = (definitions, table.base),
-      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(table.base.columns.head.asName) == null) None else Some(table.base.toModel(rs))),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(table.base.columns.head.aliasName) == null) None else Some(table.base.toModel(rs))),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -233,7 +233,7 @@ class Query[B <: TableDef[_], T, R](
       base        = base,
       columns     = columns,
       definitions = (definitions, wrappedQuery.definitions),
-      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(wrappedQuery.underlying.columns.head.asName) == null) None else Some(wrappedQuery.underlying.mapper(rs))),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(wrappedQuery.underlying.columns.head.aliasName) == null) None else Some(wrappedQuery.underlying.mapper(rs))),
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -319,19 +319,19 @@ class Query[B <: TableDef[_], T, R](
     select match {
       case Some(x) => sb.append(x)
       case None => {
-        val selectColumns = columns.map(c => c.fullName + " AS " + c.asName) ++
+        val selectColumns = columns.map(c => c.fullName + " AS " + c.aliasName) ++
           innerJoins.flatMap { case (query, alias, _) =>
             if(query.underlying.isTableQuery){
-              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.asName)
+              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.aliasName)
             } else {
-              query.underlying.columns.map(c => alias + "." + c.asName + " AS " + c.asName)
+              query.underlying.columns.map(c => alias + "." + c.aliasName + " AS " + c.aliasName)
             }
           } ++
           leftJoins.flatMap  { case (query, alias, _) =>
             if(query.underlying.isTableQuery){
-              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.asName)
+              query.underlying.getBase.columns.map(c => c.fullName + " AS " + c.aliasName)
             } else {
-              query.underlying.columns.map(c => alias + "." + c.asName + " AS " + c.asName)
+              query.underlying.columns.map(c => alias + "." + c.aliasName + " AS " + c.aliasName)
             }
           }
         sb.append(selectColumns.mkString(", "))

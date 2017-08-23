@@ -241,12 +241,10 @@ class QuerySpec extends FunSuite {
 
 case class User(userId: Long, userName: String, companyId: Option[Long])
 
-case class Users(
-  alias: Option[String],
-  userId: Column[Long],
-  userName: Column[String],
-  companyId: OptionalColumn[Long]
-) extends TableDef[User]("USERS") {
+case class Users(alias: Option[String], prefix: Option[String]) extends TableDef[User]("USERS") {
+  val userId = new Column[Long](this, "USER_ID", true)
+  val userName = new Column[String](this, "USER_NAME")
+  val companyId = new OptionalColumn[Long](this, "COMPANY_ID")
 
   override def toModel(rs: ResultSet): User = {
     User(userId.get(rs), userName.get(rs), companyId.get(rs))
@@ -254,38 +252,23 @@ case class Users(
 }
 
 object Users {
-  def apply() = new SingleTableAction[Users, User](table(None))
-  def apply(alias: String) = new Query[Users, Users, User](table(Some(alias)))
-  private def table(alias: Option[String]) = {
-    new Users(
-      alias,
-      new Column[Long](alias, "USER_ID", true),
-      new Column[String](alias, "USER_NAME"),
-      new OptionalColumn[Long](alias, "COMPANY_ID")
-    )
-  }
+  def apply() = new SingleTableAction[Users, User](new Users(None, None))
+  def apply(alias: String) = new Query[Users, Users, User](new Users(Some(alias), None))
 }
 
 case class Company(companyId: Long, companyName: String)
 
-case class Companies(
-  alias: Option[String],
-  companyId: Column[Long],
-  companyName: Column[String]
-) extends TableDef[Company]("COMPANIES") {
+case class Companies(alias: Option[String], prefix: Option[String]) extends TableDef[Company]("COMPANIES") {
+
+  val companyId = new Column[Long](this, "COMPANY_ID", true)
+  val companyName = new Column[String](this, "COMPANY_NAME")
+
   override def toModel(rs: ResultSet): Company = {
     Company(companyId.get(rs), companyName.get(rs))
   }
 }
 
 object Companies {
-  def apply() = new SingleTableAction[Companies, Company](table(None))
-  def apply(alias: String) = new Query[Companies, Companies, Company](table(Some(alias)))
-  private def table(alias: Option[String]) = {
-    new Companies(
-      alias,
-      new Column[Long](alias, "COMPANY_ID", true),
-      new Column[String](alias, "COMPANY_NAME")
-    )
-  }
+  def apply() = new SingleTableAction[Companies, Company](new Companies(None, None))
+  def apply(alias: String) = new Query[Companies, Companies, Company](new Companies(Some(alias), None))
 }

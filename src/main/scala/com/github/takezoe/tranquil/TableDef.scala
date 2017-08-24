@@ -7,18 +7,19 @@ import java.sql.ResultSet
  */
 abstract class TableDef[R <: Product](val tableName: String) extends Product {
 
-  lazy val columns: Seq[ColumnBase[_, _]] = {
-    productIterator.collect { case c: ColumnBase[_, _] => c }.toSeq
-  }
+  lazy val columns: Seq[ColumnBase[_, _]] = getClass.getDeclaredFields.collect { case field
+    if classOf[ColumnBase[_, _]].isAssignableFrom(field.getType) =>
+      field.setAccessible(true)
+      field.get(this).asInstanceOf[ColumnBase[_, _]]
+  }.toSeq
 
   val alias: Option[String]
 
+  val prefix: Option[String]
+
   def wrap(alias: String): this.type = {
-    val cols = columns
-    val constructor = getClass.getDeclaredConstructor(
-      classOf[Option[String]] +: cols.map(_.getClass): _*
-    )
-    constructor.newInstance(Option(alias) +: cols.map(_.wrap(alias)): _*).asInstanceOf[this.type]
+    val constructor = getClass.getDeclaredConstructor(classOf[Option[String]], classOf[Option[String]])
+    constructor.newInstance(Option(alias), this.alias.map(_ + "_")).asInstanceOf[this.type]
   }
 
   def toModel(rs: ResultSet): R

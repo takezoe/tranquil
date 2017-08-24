@@ -5,7 +5,7 @@ import java.sql.ResultSet
 /**
  * A base class for table definitions which are used for DSL.
  */
-abstract class TableDef[R <: Product](val tableName: String) extends Product {
+abstract class TableDef[R <: Product](val tableName: String){
 
   lazy val columns: Seq[ColumnBase[_, _]] = getClass.getDeclaredFields.collect { case field
     if classOf[ColumnBase[_, _]].isAssignableFrom(field.getType) =>
@@ -13,8 +13,14 @@ abstract class TableDef[R <: Product](val tableName: String) extends Product {
       field.get(this).asInstanceOf[ColumnBase[_, _]]
   }.toSeq
 
+  /**
+   * An alias of this table.
+   */
   val alias: Option[String]
 
+  /**
+   * A prefix of columns of this table.
+   */
   val prefix: Option[String]
 
   def wrap(alias: String): this.type = {
@@ -22,8 +28,14 @@ abstract class TableDef[R <: Product](val tableName: String) extends Product {
     constructor.newInstance(Option(alias), this.alias.map(_ + "_")).asInstanceOf[this.type]
   }
 
+  /**
+   * Convert a record to an entity.
+   */
   def toModel(rs: ResultSet): R
 
+  /**
+   * Convert an entity to a sequence of values.
+   */
   def fromModel(model: R): Seq[Any] = model.productIterator.toSeq
 
 }

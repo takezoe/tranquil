@@ -5,8 +5,16 @@ import java.time._
 import java.util.concurrent.atomic.AtomicLong
 
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 package object tranquil {
+
+  // Convert SingleTableAction to SingleTableQuery
+  implicit def toQuery[E <: Product, T <: TableDef[E]](t: SingleTableAction[T, E])(implicit c: ClassTag[T]): SingleTableQuery[T, E] = {
+    val constructor = c.runtimeClass.getConstructor(classOf[Option[String]], classOf[Option[String]])
+    val tableDef = constructor.newInstance(Some(AliasGenerator.generate()), None).asInstanceOf[T]
+    new SingleTableQuery[T, E](tableDef)
+  }
 
   object AliasGenerator {
     private val counter = new AtomicLong(0)

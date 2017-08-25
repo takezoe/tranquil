@@ -16,16 +16,19 @@ abstract class TableDef[R <: Product](val tableName: String){
   /**
    * An alias of this table.
    */
-  val alias: Option[String]
+  private[tranquil] var alias: Option[String] = None
 
   /**
    * A prefix of columns of this table.
    */
-  val prefix: Option[String]
+  private[tranquil] var prefix: Option[String] = None
 
   def wrap(alias: String): this.type = {
-    val constructor = getClass.getDeclaredConstructor(classOf[Option[String]], classOf[Option[String]])
-    constructor.newInstance(Option(alias), this.alias.map(_ + "_")).asInstanceOf[this.type]
+    val constructor = getClass.getDeclaredConstructor()
+    val tableDef = constructor.newInstance().asInstanceOf[this.type]
+    tableDef.alias = Option(alias)
+    tableDef.prefix = this.alias.map(_ + "_")
+    tableDef
   }
 
   /**

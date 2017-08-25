@@ -241,7 +241,7 @@ class QuerySpec extends FunSuite {
 
 case class User(userId: Long, userName: String, companyId: Option[Long])
 
-case class Users(alias: Option[String], prefix: Option[String]) extends TableDef[User]("USERS") {
+class Users extends TableDef[User]("USERS") {
   val userId = new Column[Long](this, "USER_ID", true)
   val userName = new Column[String](this, "USER_NAME")
   val companyId = new OptionalColumn[Long](this, "COMPANY_ID")
@@ -252,12 +252,12 @@ case class Users(alias: Option[String], prefix: Option[String]) extends TableDef
 }
 
 object Users {
-  def apply() = new SingleTableAction[Users, User](new Users(None, None))
+  def apply() = new SingleTableAction[Users, User](new Users())
 }
 
 case class Company(companyId: Long, companyName: String)
 
-case class Companies(alias: Option[String], prefix: Option[String]) extends TableDef[Company]("COMPANIES") {
+class Companies extends TableDef[Company]("COMPANIES") {
 
   val companyId = new Column[Long](this, "COMPANY_ID", true)
   val companyName = new Column[String](this, "COMPANY_NAME")
@@ -268,5 +268,5 @@ case class Companies(alias: Option[String], prefix: Option[String]) extends Tabl
 }
 
 object Companies {
-  def apply() = new SingleTableAction[Companies, Company](new Companies(None, None))
+  def apply() = new SingleTableAction[Companies, Company](new Companies())
 }

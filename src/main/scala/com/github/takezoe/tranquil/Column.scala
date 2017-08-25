@@ -8,9 +8,9 @@ import java.sql.{PreparedStatement, ResultSet}
 abstract sealed class ColumnBase[T, S](val tableDef: TableDef[_], val columnName: String, val auto: Boolean = false)
                                (implicit val binder: ColumnBinder[S]){
 
-  val localName = tableDef.prefix.map { _ + columnName} getOrElse columnName
-  val fullName  = tableDef.alias.map { x => x + "." + localName } getOrElse localName
-  val aliasName = tableDef.alias.map { x => x + "_" + localName } getOrElse localName
+  lazy val localName = tableDef.prefix.map { _ + columnName} getOrElse columnName
+  lazy val fullName  = tableDef.alias.map { x => x + "." + localName } getOrElse localName
+  lazy val aliasName = tableDef.alias.map { x => x + "_" + localName } getOrElse localName
 
   def wrap(alias: String): this.type
 
@@ -221,8 +221,8 @@ class OptionalColumn[T](tableDef: TableDef[_], columnName: String)(implicit bind
  */
 class FunctionColumn[T](tableDef: TableDef[_], columnName: String, select: String, name: String)
                        (implicit binder: ColumnBinder[T]) extends Column[T](tableDef, columnName)(binder){
-  override val aliasName = name
-  override val fullName  = select
+  override lazy val aliasName = name
+  override lazy val fullName  = select
 
   override def wrap(alias: String): FunctionColumn.this.type = {
     new FunctionColumn[T](tableDef.wrap(alias), "** columnName **", columnName, "** name **").asInstanceOf[this.type]
@@ -236,8 +236,8 @@ class FunctionOptionalColumn[T](tableDef: TableDef[_], columnName: String, selec
                                (implicit binder: ColumnBinder[T])
   extends OptionalColumn[T](tableDef, columnName)(binder) {
 
-  override val aliasName = name
-  override val fullName  = select
+  override lazy val aliasName = name
+  override lazy val fullName  = select
 
 }
 

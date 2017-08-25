@@ -2,10 +2,16 @@ package com.github.takezoe
 
 import java.sql._
 import java.time._
+import java.util.concurrent.atomic.AtomicLong
 
 import scala.language.implicitConversions
 
 package object tranquil {
+
+  object AliasGenerator {
+    private val counter = new AtomicLong(0)
+    def generate(): String = "x" + counter.getAndIncrement()
+  }
 
   implicit val DefaultZone = ZoneId.systemDefault()
 

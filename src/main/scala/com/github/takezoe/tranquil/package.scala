@@ -2,7 +2,6 @@ package com.github.takezoe
 
 import java.sql._
 import java.time._
-import java.util.concurrent.atomic.AtomicLong
 
 import scala.language.implicitConversions
 
@@ -11,11 +10,6 @@ package object tranquil {
   // Convert SingleTableAction to SingleTableQuery
   implicit def toQuery[E <: Product, T <: TableDef[E]](t: SingleTableAction[T, E]): SingleTableQuery[T, E] = {
     t.select()
-  }
-
-  object AliasGenerator {
-    private val counter = new AtomicLong(0)
-    def generate(): String = "x" + counter.getAndIncrement()
   }
 
   implicit val DefaultZone = ZoneId.systemDefault()

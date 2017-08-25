@@ -16,7 +16,7 @@ import java.sql.ResultSet
 
 case class User(userId: String, userName: String, companyId: Option[Int])
 
-case class Users(alias: Option[String], prefix: Option[String]) extends TableDef[User]("USERS") {
+class Users extends TableDef[User]("USERS") {
   val userId    = new Column[String](this, "USER_ID"),
   val userName  = new Column[String](this, "USER_NAME"),
   val companyId = new OptionalColumn[Int](this, "COMPANY_ID")
@@ -27,12 +27,12 @@ case class Users(alias: Option[String], prefix: Option[String]) extends TableDef
 }
 
 object Users {
-  def apply() = new SingleTableAction[Users](new Users(None, None))
+  def apply() = new SingleTableAction[Users](new Users())
 }
 
 case class Company(companyId: Int, companyName: String)
 
-case class Companies(alias: Option[String], prefix: Option[String]) extends TableDef[Company]("COMPANIES") {
+class Companies extends TableDef[Company]("COMPANIES") {
   val companyId   = new Column[Int](this, "COMPANY_ID"),
   val companyName = new Column[String](this, "COMPANY_NAME")
 
@@ -42,7 +42,7 @@ case class Companies(alias: Option[String], prefix: Option[String]) extends Tabl
 }
 
 object Companies {
-  def apply() = new SingleTableAction[Companies](new Companies(None, None))
+  def apply() = new SingleTableAction[Companies](new Companies())
 }
 ```
 

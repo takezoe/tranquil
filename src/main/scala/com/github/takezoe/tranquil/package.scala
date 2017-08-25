@@ -7,6 +7,11 @@ import scala.language.implicitConversions
 
 package object tranquil {
 
+  // Convert SingleTableAction to SingleTableQuery
+  implicit def toQuery[E <: Product, T <: TableDef[E]](t: SingleTableAction[T, E]): SingleTableQuery[T, E] = {
+    t.select()
+  }
+
   implicit val DefaultZone = ZoneId.systemDefault()
 
   // Syntax sugar

@@ -16,8 +16,8 @@ class QuerySpec extends FunSuite {
       Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
       Users().insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val results = Users("u")
-        .leftJoin(Companies("c")){ case u ~ c => u.companyId eq c.companyId }
+      val results = Users()
+        .leftJoin(Companies()){ case u ~ c => u.companyId eq c.companyId }
         .filter { case u ~ c => c.companyName eq "BizReach" }
         .sortBy { case u ~ c => u.userId.asc }
         .list(conn)
@@ -40,7 +40,7 @@ class QuerySpec extends FunSuite {
       Users().insert(User(Default[Long], "takezoe", None)).execute(conn)
       Users().insert(User(Default[Long], "n.takezoe", None)).execute(conn)
 
-      val query = Users("u")
+      val query = Users()
         .filter(_.userName eq "takezoe")
         .map { t => t ~ t.companyId }
 
@@ -61,7 +61,7 @@ class QuerySpec extends FunSuite {
       Users().insert(_.userName -> "user2").execute(conn)
       Users().insert(_.userName -> "user3").execute(conn)
 
-      val query = Users("u")
+      val query = Users()
         .filter(_.userName in Seq("user1", "user2"))
 
       val result = query.list(conn)
@@ -81,8 +81,8 @@ class QuerySpec extends FunSuite {
       Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
       Users().insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val query = Users("u")
-        .filter(_.companyId in (Companies("c").filter(_.companyId eq 1).map(_.companyId)))
+      val query = Users()
+        .filter(_.companyId in (Companies().filter(_.companyId eq 1).map(_.companyId)))
 
       val result = query.list(conn)
 
@@ -101,7 +101,7 @@ class QuerySpec extends FunSuite {
       Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
       Users().insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val results = Users("u")
+      val results = Users()
         .groupBy { t => t.companyId ~ t.userId.count }
         .filter { case _ ~ count => count ge 1 }
         .list(conn)
@@ -119,9 +119,9 @@ class QuerySpec extends FunSuite {
       Companies().insert(_.companyName -> "BizReach").execute(conn)
       Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
 
-      val results = Users("u")
+      val results = Users()
         .filter(_.companyId eq (
-          Companies("c").filter(_.companyName eq "BizReach").map(_.companyId)
+          Companies().filter(_.companyName eq "BizReach").map(_.companyId)
         ))
         .list(conn)
 
@@ -138,16 +138,16 @@ class QuerySpec extends FunSuite {
       Companies().insert(_.companyName -> "BizReach").execute(conn)
       Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
 
-      val subquery1 = Companies("c1")
+      val subquery1 = Companies()
         .filter(_.companyName eq "BizReach")
 
-      val subquery2 = Companies("c2")
+      val subquery2 = Companies()
         .filter(_.companyName eq "BizReach")
         .map { t => t.companyId ~ t.companyName }
 
-      val results = Users("u")
-        .innerJoin(subquery1, "x1"){ case u ~ c => u.companyId eq c.companyId }
-        .leftJoin(subquery2, "x2"){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
+      val results = Users()
+        .innerJoin(subquery1){ case u ~ c => u.companyId eq c.companyId }
+        .leftJoin(subquery2){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
         .list(conn)
 
       assert(results == Seq(((User(1, "employee1", Some(1)), Company(1, "BizReach")), Some((1, "BizReach")))))
@@ -162,7 +162,7 @@ class QuerySpec extends FunSuite {
       createTables(conn)
       Users().insert(u => (u.userName -> "takezoe")).execute(conn)
 
-      val query = Users("u")
+      val query = Users()
         .filter(_.userName.toUpperCase eq "TAKEZOE")
         .map(_.userName.toUpperCase)
 
@@ -195,16 +195,16 @@ class QuerySpec extends FunSuite {
       Users().insert(_.userName -> "takezoe").execute(conn)
       Users().insert(_.userName -> "tak_zoe").execute(conn)
 
-      val results1 = Users("u").filter(_.userName.startsWith("tak")).list(conn)
+      val results1 = Users().filter(_.userName.startsWith("tak")).list(conn)
       assert(results1 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
-      val results2 = Users("u").filter(_.userName.endsWith("zoe")).list(conn)
+      val results2 = Users().filter(_.userName.endsWith("zoe")).list(conn)
       assert(results2 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
-      val results3 = Users("u").filter(_.userName.contains("kez")).list(conn)
+      val results3 = Users().filter(_.userName.contains("kez")).list(conn)
       assert(results3 == Seq(User(1, "takezoe", None)))
 
-      val results4= Users("u").filter(_.userName.contains("k_z")).list(conn)
+      val results4 = Users().filter(_.userName.contains("k_z")).list(conn)
       assert(results4 == Seq(User(2, "tak_zoe", None)))
 
     } finally {
@@ -253,7 +253,6 @@ case class Users(alias: Option[String], prefix: Option[String]) extends TableDef
 
 object Users {
   def apply() = new SingleTableAction[Users, User](new Users(None, None))
-  def apply(alias: String) = new Query[Users, Users, User](new Users(Some(alias), None))
 }
 
 case class Company(companyId: Long, companyName: String)
@@ -270,5 +269,4 @@ case class Companies(alias: Option[String], prefix: Option[String]) extends Tabl
 
 object Companies {
   def apply() = new SingleTableAction[Companies, Company](new Companies(None, None))
-  def apply(alias: String) = new Query[Companies, Companies, Company](new Companies(Some(alias), None))
 }

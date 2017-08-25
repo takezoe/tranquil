@@ -100,6 +100,7 @@ class WrappedQuery[T, R](
   override protected[tranquil] val definitions: T = shape.wrap(alias).definitions
 }
 
+class SingleTableQuery[T <: TableDef[_], R](base: T) extends Query[T, T, R](base)
 
 /**
  *
@@ -175,7 +176,7 @@ class Query[B <: TableDef[_], T, R](
     ))
   }
 
-  def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+  def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
     new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
@@ -190,9 +191,10 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def innerJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition)
+  def innerJoin[T2, R2](query: RunnableQuery[T2, R2])(on: (T, T2) => Condition)
                        (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, R2)] = {
 
+    val alias = AliasGenerator.generate()
     val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
 
     new Query[B, (T, T2), (R, R2)](
@@ -209,7 +211,7 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+  def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
     new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,
@@ -224,9 +226,10 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[T2, R2](query: RunnableQuery[T2, R2], alias: String)(on: (T, T2) => Condition)
+  def leftJoin[T2, R2](query: RunnableQuery[T2, R2])(on: (T, T2) => Condition)
                       (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, Option[R2])] = {
 
+    val alias = AliasGenerator.generate()
     val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
 
     new Query[B, (T, T2), (R, Option[R2])](

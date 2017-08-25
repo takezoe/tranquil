@@ -28,7 +28,6 @@ case class Users(alias: Option[String], prefix: Option[String]) extends TableDef
 
 object Users {
   def apply() = new SingleTableAction[Users](new Users(None, None))
-  def apply(alias: String) = new Query[Users, Users, User](new Users(Some(alias), None))
 }
 
 case class Company(companyId: Int, companyName: String)
@@ -44,7 +43,6 @@ case class Companies(alias: Option[String], prefix: Option[String]) extends Tabl
 
 object Companies {
   def apply() = new SingleTableAction[Companies](new Companies(None, None))
-  def apply(alias: String) = new Query[Companies, Companies, Company](new Companies(Some(alias), None))
 }
 ```
 
@@ -58,8 +56,8 @@ val conn: java.sql.Connection = ...
 
 // SELECT
 val users: Seq[(User, Option[Company])] =
-  Users("u")
-    .leftJoin(Companies("c")){ case u ~ c => u.companyId eq c.companyId }
+  Users()
+    .leftJoin(Companies()){ case u ~ c => u.companyId eq c.companyId }
     .filter { case u ~ c => (u.userId eq "takezoe") || (u.userId eq "takezoen") }
     .sortBy { case u ~ c => u.userId asc }
     .list(conn)
@@ -84,7 +82,7 @@ Grouping and aggregation are possible as follows:
 
 ```scala
 val counts: Seq[(Option[Int], Long)] = 
-  Users("u")
+  Users()
     .groupBy { t => t.companyId ~ t.userId.count }
     .filter  { case companyId ~ count => count ge 10 }
     .list(conn)

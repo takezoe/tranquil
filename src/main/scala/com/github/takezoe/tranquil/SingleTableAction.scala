@@ -23,6 +23,8 @@ class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
     new DeleteAction(base)
   }
 
+  def select(): SingleTableQuery[B, R] = new SingleTableQuery[B, R](base.wrap(AliasGenerator.generate()))
+
 }
 
 class InsertAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn){

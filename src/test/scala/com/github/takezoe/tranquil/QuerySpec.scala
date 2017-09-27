@@ -5,19 +5,21 @@ import java.sql._
 import org.scalatest.FunSuite
 import com.github.takezoe.tranquil.Dialect.generic
 
+import Tables._
+
 class QuerySpec extends FunSuite {
 
   test("leftJoin"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Companies().insert(_.companyName -> "BizReach").execute(conn)
-      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee3")).execute(conn)
+      Companies.insert(_.companyName -> "BizReach").execute(conn)
+      Users.insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val results = Users()
-        .leftJoin(Companies()){ case u ~ c => u.companyId eq c.companyId }
+      val results = Users
+        .leftJoin(Companies){ case u ~ c => u.companyId eq c.companyId }
         .filter { case u ~ c => c.companyName eq "BizReach" }
         .sortBy { case u ~ c => u.userId.asc }
         .list(conn)
@@ -37,10 +39,10 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(User(Default[Long], "takezoe", None)).execute(conn)
-      Users().insert(User(Default[Long], "n.takezoe", None)).execute(conn)
+      Users.insert(User(Default[Long], "takezoe", None)).execute(conn)
+      Users.insert(User(Default[Long], "n.takezoe", None)).execute(conn)
 
-      val query = Users()
+      val query = Users
         .filter(_.userName eq "takezoe")
         .map { t => t ~ t.companyId }
 
@@ -57,11 +59,11 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(_.userName -> "user1").execute(conn)
-      Users().insert(_.userName -> "user2").execute(conn)
-      Users().insert(_.userName -> "user3").execute(conn)
+      Users.insert(_.userName -> "user1").execute(conn)
+      Users.insert(_.userName -> "user2").execute(conn)
+      Users.insert(_.userName -> "user3").execute(conn)
 
-      val query = Users()
+      val query = Users
         .filter(_.userName in Seq("user1", "user2"))
 
       val result = query.list(conn)
@@ -76,13 +78,13 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Companies().insert(_.companyName -> "BizReach").execute(conn)
-      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee3")).execute(conn)
+      Companies.insert(_.companyName -> "BizReach").execute(conn)
+      Users.insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val query = Users()
-        .filter(_.companyId in (Companies().filter(_.companyId eq 1).map(_.companyId)))
+      val query = Users
+        .filter(_.companyId in (Companies.filter(_.companyId eq 1).map(_.companyId)))
 
       val result = query.list(conn)
 
@@ -96,12 +98,12 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Companies().insert(_.companyName -> "BizReach").execute(conn)
-      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
-      Users().insert(u => (u.userName -> "employee3")).execute(conn)
+      Companies.insert(_.companyName -> "BizReach").execute(conn)
+      Users.insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee2") ~ (u.companyId -> 1)).execute(conn)
+      Users.insert(u => (u.userName -> "employee3")).execute(conn)
 
-      val results = Users()
+      val results = Users
         .groupBy { t => t.companyId ~ t.userId.count }
         .filter { case _ ~ count => count ge 1 }
         .list(conn)
@@ -116,12 +118,12 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Companies().insert(_.companyName -> "BizReach").execute(conn)
-      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Companies.insert(_.companyName -> "BizReach").execute(conn)
+      Users.insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
 
-      val results = Users()
+      val results = Users
         .filter(_.companyId eq (
-          Companies().filter(_.companyName eq "BizReach").map(_.companyId)
+          Companies.filter(_.companyName eq "BizReach").map(_.companyId)
         ))
         .list(conn)
 
@@ -135,17 +137,17 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Companies().insert(_.companyName -> "BizReach").execute(conn)
-      Users().insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
+      Companies.insert(_.companyName -> "BizReach").execute(conn)
+      Users.insert(u => (u.userName -> "employee1") ~ (u.companyId -> 1)).execute(conn)
 
-      val subquery1 = Companies()
+      val subquery1 = Companies
         .filter(_.companyName eq "BizReach")
 
-      val subquery2 = Companies()
+      val subquery2 = Companies
         .filter(_.companyName eq "BizReach")
         .map { t => t.companyId ~ t.companyName }
 
-      val results = Users()
+      val results = Users
         .innerJoin(subquery1){ case u ~ c => u.companyId eq c.companyId }
         .leftJoin(subquery2){ case _ ~ c ~ (companyId ~ _) => c.companyId eq companyId }
         .list(conn)
@@ -160,9 +162,9 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(u => (u.userName -> "takezoe")).execute(conn)
+      Users.insert(u => (u.userName -> "takezoe")).execute(conn)
 
-      val query = Users()
+      val query = Users
         .filter(_.userName.toUpperCase eq "TAKEZOE")
         .map(_.userName.toUpperCase)
 
@@ -178,8 +180,8 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      val id1 = Users().insert(_.userName -> "user1").executeAndReturnGeneratedId(conn)
-      val id2 = Users().insert(_.userName -> "user2").executeAndReturnGeneratedId(conn)
+      val id1 = Users.insert(_.userName -> "user1").executeAndReturnGeneratedId(conn)
+      val id2 = Users.insert(_.userName -> "user2").executeAndReturnGeneratedId(conn)
 
       assert(id1 == 1)
       assert(id2 == 2)
@@ -192,19 +194,19 @@ class QuerySpec extends FunSuite {
     val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
-      Users().insert(_.userName -> "takezoe").execute(conn)
-      Users().insert(_.userName -> "tak_zoe").execute(conn)
+      Users.insert(_.userName -> "takezoe").execute(conn)
+      Users.insert(_.userName -> "tak_zoe").execute(conn)
 
-      val results1 = Users().filter(_.userName.startsWith("tak")).list(conn)
+      val results1 = Users.filter(_.userName.startsWith("tak")).list(conn)
       assert(results1 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
-      val results2 = Users().filter(_.userName.endsWith("zoe")).list(conn)
+      val results2 = Users.filter(_.userName.endsWith("zoe")).list(conn)
       assert(results2 == Seq(User(1, "takezoe", None), User(2, "tak_zoe", None)))
 
-      val results3 = Users().filter(_.userName.contains("kez")).list(conn)
+      val results3 = Users.filter(_.userName.contains("kez")).list(conn)
       assert(results3 == Seq(User(1, "takezoe", None)))
 
-      val results4 = Users().filter(_.userName.contains("k_z")).list(conn)
+      val results4 = Users.filter(_.userName.contains("k_z")).list(conn)
       assert(results4 == Seq(User(2, "tak_zoe", None)))
 
     } finally {
@@ -251,10 +253,6 @@ class Users extends TableDef[User]("USERS") {
   }
 }
 
-object Users {
-  def apply() = new SingleTableAction[Users, User](new Users())
-}
-
 case class Company(companyId: Long, companyName: String)
 
 class Companies extends TableDef[Company]("COMPANIES") {
@@ -267,6 +265,7 @@ class Companies extends TableDef[Company]("COMPANIES") {
   }
 }
 
-object Companies {
-  def apply() = new SingleTableAction[Companies, Company](new Companies())
+object Tables {
+  val Users = new SingleTableAction[Users, User](new Users())
+  val Companies = new SingleTableAction[Companies, Company](new Companies())
 }

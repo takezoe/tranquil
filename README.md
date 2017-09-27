@@ -24,10 +24,6 @@ class Users extends TableDef[User]("USERS") {
   }
 }
 
-object Users {
-  def apply() = new SingleTableAction[Users](new Users())
-}
-
 case class Company(companyId: Int, companyName: String)
 
 class Companies extends TableDef[Company]("COMPANIES") {
@@ -39,8 +35,9 @@ class Companies extends TableDef[Company]("COMPANIES") {
   }
 }
 
-object Companies {
-  def apply() = new SingleTableAction[Companies](new Companies())
+object Tables {
+  val Users = new SingleTableAction[Users, User](new Users())
+  val Companies = new SingleTableAction[Companies, Company](new Companies())
 }
 ```
 
@@ -49,13 +46,14 @@ Then you can assemble SQL using type-safe DSL.
 ```scala
 import com.github.takezoe.tranquil._
 import com.github.takezoe.tranquil.Dialect.generic
+import Tables._
 
 val conn: java.sql.Connection = ...
 
 // SELECT
 val users: Seq[(User, Option[Company])] =
-  Users()
-    .leftJoin(Companies()){ case u ~ c => u.companyId eq c.companyId }
+  Users
+    .leftJoin(Companies){ case u ~ c => u.companyId eq c.companyId }
     .filter { case u ~ c => (u.userId eq "takezoe") || (u.userId eq "takezoen") }
     .sortBy { case u ~ c => u.userId asc }
     .list(conn)
@@ -80,7 +78,7 @@ Grouping and aggregation are possible as follows:
 
 ```scala
 val counts: Seq[(Option[Int], Long)] = 
-  Users()
+  Users
     .groupBy { t => t.companyId ~ t.userId.count }
     .filter  { case companyId ~ count => count ge 10 }
     .list(conn)
@@ -90,7 +88,7 @@ Also you can assemble insert, update and delete SQL in the same way.
 
 ```scala
 // INSERT
-Users()
+Users
   .insert { u => 
     (u.userId -> "takezoe") ~ 
     (u.userName -> "Naoki Takezoe")
@@ -98,13 +96,13 @@ Users()
   .execute(conn)
 
 // UPDATE
-Users()
+Users
   .update(_.userName -> "N. Takezoe")
   .filter(_.userId eq "takezoe")
   .execute(conn)
 
 // DELETE
-Users()
+Users
   .delete()
   .filter(_.userId eq "takezoe")
   .execute(conn)

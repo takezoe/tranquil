@@ -4,6 +4,8 @@ import java.sql.{Connection, Statement}
 
 class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
 
+  private val aliasGen = new AliasGenerator()
+
   def insert(updateColumns: B => UpdateColumn): InsertAction[B] = {
     new InsertAction(base, updateColumns(base))
   }
@@ -23,7 +25,7 @@ class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
     new DeleteAction(base)
   }
 
-  def select(): SingleTableQuery[B, R] = new SingleTableQuery[B, R](base.wrap(AliasGenerator.generate()))
+  def select(): SingleTableQuery[B, R] = new SingleTableQuery[B, R](base.wrap(aliasGen.generate()), aliasGen)
 
 }
 

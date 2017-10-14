@@ -100,7 +100,7 @@ class WrappedQuery[T, R](
   override protected[tranquil] val definitions: T = shape.wrap(alias).definitions
 }
 
-class SingleTableQuery[T <: TableDef[_], R](base: T) extends Query[T, T, R](base)
+class SingleTableQuery[T <: TableDef[_], R](base: T, aliasGen: AliasGenerator) extends Query[T, T, R](base, aliasGen)
 
 /**
  *
@@ -113,6 +113,7 @@ class Query[B <: TableDef[_], T, R](
   protected[tranquil] val columns: Seq[ColumnBase[_, _]],
   protected[tranquil] val definitions: T,
   protected[tranquil] val mapper: ResultSet => R,
+  protected[tranquil] val aliasGen: AliasGenerator,
   protected[tranquil] val filters: Seq[Condition] = Nil,
   protected[tranquil] val sorts: Seq[Sort] = Nil,
   protected[tranquil] val innerJoins: Seq[(RunnableQuery[_, _], String, Condition)] = Nil,
@@ -123,11 +124,12 @@ class Query[B <: TableDef[_], T, R](
   protected[tranquil] val alias: Option[String] = None
 ) extends RunnableQuery[T, R] {
 
-  def this(base: B) = this(
+  def this(base: B, aliasGen: AliasGenerator) = this(
     base        = base,
     columns     = base.columns,
     definitions = base.asInstanceOf[T],
-    mapper      = (base.toModel _).asInstanceOf[ResultSet => R]
+    mapper      = (base.toModel _).asInstanceOf[ResultSet => R],
+    aliasGen    = aliasGen
   )
 
   override protected[tranquil] val underlying = this
@@ -147,6 +149,7 @@ class Query[B <: TableDef[_], T, R](
         columns     = grouping.columns.map(_.column),
         definitions = grouping.definition,
         mapper      = (rs: ResultSet) => grouping.get(rs),
+        aliasGen    = aliasGen,
         filters     = filters,
         sorts       = sorts,
         innerJoins  = innerJoins,
@@ -167,6 +170,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = select.columns,
       definitions = select.definition,
       mapper      = (rs: ResultSet) => select.get(rs),
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -177,14 +181,19 @@ class Query[B <: TableDef[_], T, R](
   }
 
   def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+
+    val alias = aliasGen.generate()
+    val wrappedQuery = new SingleTableQuery(table.base.renew(alias), aliasGen)
+
     new Query[B, (T, T2), (R, R2)](
       base        = base,
       columns     = columns,
-      definitions = (definitions, table.base),
-      mapper      = (rs: ResultSet) => (mapper(rs), table.base.toModel(rs)),
+      definitions = (definitions, wrappedQuery.base),
+      mapper      = (rs: ResultSet) => (mapper(rs), wrappedQuery.base.toModel(rs)),
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
-      innerJoins  = innerJoins :+ (table, table.alias.getOrElse(table.base.alias.get), on(definitions, table.base)),
+      innerJoins  = innerJoins :+ (wrappedQuery, alias, on(definitions, wrappedQuery.definitions)),
       leftJoins   = leftJoins,
       limit       = limit,
       offset      = offset
@@ -194,7 +203,7 @@ class Query[B <: TableDef[_], T, R](
   def innerJoin[T2, R2](query: RunnableQuery[T2, R2])(on: (T, T2) => Condition)
                        (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, R2)] = {
 
-    val alias = AliasGenerator.generate()
+    val alias = aliasGen.generate()
     val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
 
     new Query[B, (T, T2), (R, R2)](
@@ -202,6 +211,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = (definitions, wrappedQuery.definitions),
       mapper      = (rs: ResultSet) => (mapper(rs), wrappedQuery.underlying.mapper(rs)),
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins :+ (wrappedQuery, alias, on(definitions, wrappedQuery.definitions)),
@@ -212,15 +222,20 @@ class Query[B <: TableDef[_], T, R](
   }
 
   def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+
+    val alias = aliasGen.generate()
+    val wrappedQuery = new SingleTableQuery(table.base.renew(alias), aliasGen)
+
     new Query[B, (T, T2), (R, Option[R2])](
       base        = base,
       columns     = columns,
-      definitions = (definitions, table.base),
-      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(table.base.columns.head.aliasName) == null) None else Some(table.base.toModel(rs))),
+      definitions = (definitions, wrappedQuery.base),
+      mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(wrappedQuery.base.columns.head.aliasName) == null) None else Some(wrappedQuery.base.toModel(rs))),
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
-      leftJoins   = leftJoins :+ (table, table.alias.getOrElse(table.base.alias.get), on(definitions, table.base)),
+      leftJoins   = leftJoins :+ (wrappedQuery, alias, on(definitions, wrappedQuery.definitions)),
       limit       = limit,
       offset      = offset
     )
@@ -229,7 +244,7 @@ class Query[B <: TableDef[_], T, R](
   def leftJoin[T2, R2](query: RunnableQuery[T2, R2])(on: (T, T2) => Condition)
                       (implicit shapeOf: TableShapeOf[T2]): Query[B, (T, T2), (R, Option[R2])] = {
 
-    val alias = AliasGenerator.generate()
+    val alias = aliasGen.generate()
     val wrappedQuery = new WrappedQuery[T2, R2](alias, query)(shapeOf.apply(query.definitions))
 
     new Query[B, (T, T2), (R, Option[R2])](
@@ -237,6 +252,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = (definitions, wrappedQuery.definitions),
       mapper      = (rs: ResultSet) => (mapper(rs), if(rs.getObject(wrappedQuery.underlying.columns.head.aliasName) == null) None else Some(wrappedQuery.underlying.mapper(rs))),
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -253,6 +269,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = definitions,
       mapper      = mapper,
+      aliasGen    = aliasGen,
       filters     = filters :+ condition(definitions),
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -268,6 +285,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = definitions,
       mapper      = mapper,
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts :+ orderBy(definitions),
       innerJoins  = innerJoins,
@@ -283,6 +301,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = definitions,
       mapper      = mapper,
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,
@@ -298,6 +317,7 @@ class Query[B <: TableDef[_], T, R](
       columns     = columns,
       definitions = definitions,
       mapper      = mapper,
+      aliasGen    = aliasGen,
       filters     = filters,
       sorts       = sorts,
       innerJoins  = innerJoins,

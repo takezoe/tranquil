@@ -31,6 +31,13 @@ abstract class TableDef[R <: Product](val tableName: String){
     tableDef
   }
 
+  def renew(alias: String): this.type = {
+    val constructor = getClass.getDeclaredConstructor()
+    val tableDef = constructor.newInstance().asInstanceOf[this.type]
+    tableDef.alias = Option(alias)
+    tableDef
+  }
+
   /**
    * Convert a record to an entity.
    */

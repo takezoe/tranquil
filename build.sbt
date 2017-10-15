@@ -2,12 +2,13 @@ name := "tranquil"
 
 organization := "com.github.takezoe"
 
-version := "0.0.3"
+version := "0.0.4-SNAPSHOT"
 
 scalaVersion := "2.12.3"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "commons-io" % "commons-io" % "2.5" % "test",
   "com.h2database" % "h2" % "1.4.192" % "test"
 )
 

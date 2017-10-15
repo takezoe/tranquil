@@ -8,7 +8,7 @@ libraryDependencies += "com.github.takezoe" %% "tranquil" % "1.0.0"
 
 ## Usage
 
-At first, ready table definitions like following:
+First, ready table definitions like following:
 
 ```scala
 import com.github.takezoe.tranquil._

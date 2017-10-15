@@ -1,6 +1,6 @@
 # Tranquil [![Build Status](https://travis-ci.org/takezoe/tranquil.svg?branch=master)](https://travis-ci.org/takezoe/tranquil)
 
-Tranquil is a experiment of type-safe SQL builder for Scala.
+Tranquil an experiment of type-safe SQL builder for Scala.
 
 ```scala
 libraryDependencies += "com.github.takezoe" %% "tranquil" % "1.0.0"

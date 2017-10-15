@@ -61,9 +61,9 @@ object CodeGenerator {
     sb.append("\n")
     sb.append(table.columns.map { column =>
       if(column.nullable){
-        s"""  val ${column.propertyName} = new OptionalColumn[${column.dataType}](this, "${column.name}")"""
+        s"""  val ${column.propertyName} = new OptionalColumn[${column.dataType}](this, "${column.name}"${if(column.autoIncrement) ", true" else ""})"""
       } else {
-        s"""  val ${column.propertyName} = new Column[${column.dataType}](this, "${column.name}")"""
+        s"""  val ${column.propertyName} = new Column[${column.dataType}](this, "${column.name}"${if(column.autoIncrement) ", true" else ""})"""
       }
     }.mkString("\n"))
     sb.append("\n")

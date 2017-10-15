@@ -9,7 +9,7 @@ object Models {
    * @param columns the list of column
    */
   case class Table(name: String, columns: List[Column]){
-    val className: String = uppercamel(name)
+    val className: String = upperCamel(name)
   }
 
   /**
@@ -19,13 +19,14 @@ object Models {
    * @param typeName the column type
    * @param dataType the date type of the column
    * @param nullable the nullable flag
-   * @param primaryKey true if it is a primary key
+   * @param primaryKey true if this is a primary key
+   * @param autoIncrement true if this is an auto incremented column
    */
-  case class Column(name: String, typeName: String, dataType: String, nullable: Boolean, primaryKey: Boolean){
-    val propertyName: String = lowercamel(name)
+  case class Column(name: String, typeName: String, dataType: String, nullable: Boolean, primaryKey: Boolean, autoIncrement: Boolean){
+    val propertyName: String = lowerCamel(name)
   }
 
-  private def lowercamel(str: String): String = {
+  private def lowerCamel(str: String): String = {
     str.toLowerCase().split("_").zipWithIndex.map {
       case (word, i) =>
         i match {
@@ -35,7 +36,7 @@ object Models {
     }.mkString("")
   }
 
-  private def uppercamel(str: String): String = {
+  private def upperCamel(str: String): String = {
     str.toLowerCase().split("_").map { _.capitalize }.mkString("")
   }
 

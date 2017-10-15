@@ -48,17 +48,17 @@ class SchemaLoader(settings: Settings) {
             rs.getString("TYPE_NAME"),
             typeMappings.getOrElse(dataType,{
               DataTypes.toSqlType(dataType) match {
-                case "UNKNOWN" => throw new IllegalArgumentException("%i is unknown type.".format(dataType))
-                case sqlType   => throw new IllegalArgumentException("%s is not supported.".format(sqlType))
+                case "UNKNOWN" => throw new IllegalArgumentException(s"${dataType} is unknown type.")
+                case sqlType   => throw new IllegalArgumentException(s"${sqlType} is not supported.")
               }
             }),
             rs.getInt("NULLABLE") match {
               case DatabaseMetaData.columnNullable => true
               case _ => false
             },
-            primaryKeys.contains(columnName)
+            primaryKeys.contains(columnName),
+            rs.getString("IS_AUTOINCREMENT") == "YES"
           ))
-
         } catch {
           case ex: IllegalArgumentException => None
         }

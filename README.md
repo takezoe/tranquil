@@ -3,8 +3,10 @@
 Tranquil is a experiment of type-safe SQL builder for Scala.
 
 ```scala
-libraryDependencies += "com.github.takezoe" %% "tranquil" % "0.0.3"
+libraryDependencies += "com.github.takezoe" %% "tranquil" % "0.0.4"
 ```
+
+## Usage
 
 At first, ready table definitions like following:
 
@@ -107,3 +109,38 @@ Users
   .filter(_.userId eq "takezoe")
   .execute(conn)
 ```
+
+## Code generator
+
+Tranquil has a code generator to generate case classes and table definitions like explained above from database schema. You can run the code generator as follows:
+
+```scala
+import com.github.takezoe.tranquil.codegen._
+
+CodeGenerator.generate(Settings(
+  url       = "jdbc:h2:mem:test;TRACE_LEVEL_FILE=4",
+  driver    = "org.h2.Driver",
+  username  = "sa",
+  password  = "sa"
+))
+```
+
+Source files would be generated into `/src/main/scala/models/Tables.scala` in default.
+
+In addition, you can configure the code generator via `Settings` which is passed to `CodeGenerator`. `Settings` has following properties:
+
+property           | type            | description
+-------------------|-----------------|------------------------------------------------
+driver             | String          | JDBC driver classname (required)
+url                | String          | JDBC connection url (required)
+username           | String          | JDBC connection username (required)
+password           | String          | JDBC connection password (required)
+catalog            | String          | catalog (default is "%")
+schemaPattern      | String          | schema pattern (default is "%")
+tablePattern       | String          | table pattern (default is "%")
+includeTablePattern| String          | regular expression which matches included tables (default is "")
+excludeTablePattern| String          | regular expression which matches excluded tables (default is "")
+packageName        | String          | package name of generated source (default is "models")
+targetDir          | File            | output directory of generated source (default is new File("src/main/scala"))
+charset            | String          | chaarset of generated source (default is "UTF-8")
+typeMappings       | Map[Int, String]| mappings of SQL type to Scala type (default is DataTypes.defaultMappings)

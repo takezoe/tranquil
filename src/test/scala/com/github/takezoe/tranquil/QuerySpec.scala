@@ -10,7 +10,7 @@ import Tables._
 class QuerySpec extends FunSuite {
 
   test("leftJoin"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Companies.insert(_.companyName -> "BizReach").execute(conn)
@@ -36,7 +36,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("count"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Users.insert(User(Default[Long], "takezoe", None)).execute(conn)
@@ -56,7 +56,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("in"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Users.insert(_.userName -> "user1").execute(conn)
@@ -75,7 +75,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("in with subquery"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Companies.insert(_.companyName -> "BizReach").execute(conn)
@@ -95,7 +95,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("groupBy"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Companies.insert(_.companyName -> "BizReach").execute(conn)
@@ -115,7 +115,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("subquery in condition"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Companies.insert(_.companyName -> "BizReach").execute(conn)
@@ -134,7 +134,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("subquery in join"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Companies.insert(_.companyName -> "BizReach").execute(conn)
@@ -159,7 +159,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("dialect function"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Users.insert(u => (u.userName -> "takezoe")).execute(conn)
@@ -177,7 +177,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("returning"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       val id1 = Users.insert(_.userName -> "user1").executeAndReturnGeneratedId(conn)
@@ -191,7 +191,7 @@ class QuerySpec extends FunSuite {
   }
 
   test("like operator"){
-    val conn = DriverManager.getConnection("jdbc:h2:mem:test;TRACE_LEVEL_FILE=4")
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
     try {
       createTables(conn)
       Users.insert(_.userName -> "takezoe").execute(conn)

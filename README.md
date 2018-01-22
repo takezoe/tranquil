@@ -17,8 +17,8 @@ import java.sql.ResultSet
 case class User(userId: String, userName: String, companyId: Option[Int])
 
 class Users extends TableDef[User]("USERS") {
-  val userId    = new Column[String](this, "USER_ID"),
-  val userName  = new Column[String](this, "USER_NAME"),
+  val userId    = new Column[String](this, "USER_ID")
+  val userName  = new Column[String](this, "USER_NAME")
   val companyId = new OptionalColumn[Int](this, "COMPANY_ID")
 
   override def toModel(rs: ResultSet): User = {
@@ -29,7 +29,7 @@ class Users extends TableDef[User]("USERS") {
 case class Company(companyId: Int, companyName: String)
 
 class Companies extends TableDef[Company]("COMPANIES") {
-  val companyId   = new Column[Int](this, "COMPANY_ID"),
+  val companyId   = new Column[Int](this, "COMPANY_ID")
   val companyName = new Column[String](this, "COMPANY_NAME")
 
   override def toModel(rs: ResultSet): Company = {

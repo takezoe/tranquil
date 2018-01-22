@@ -126,6 +126,17 @@ abstract sealed class ColumnBase[T, S](val tableDef: TableDef[_], val columnName
     Condition(SimpleColumnTerm(this), Some(QueryTerm("(" + sql + ")")), "IN", params.params)
   }
 
+  def notIn(values: Seq[T])(implicit binder: ColumnBinder[T]): Condition = {
+    val sql = values.map(_ => "?").mkString("(", ",", ")")
+    val params = values.map(value => Param(value, binder))
+    Condition(SimpleColumnTerm(this), Some(QueryTerm(sql)), "NOT IN", params)
+  }
+
+  def notIn(query: RunnableQuery[_, T])(implicit dialect: Dialect): Condition = {
+    val (sql, params) = query.selectStatement()
+    Condition(SimpleColumnTerm(this), Some(QueryTerm("(" + sql + ")")), "NOT IN", params.params)
+  }
+
   def asc: Sort = {
     Sort(s"${fullName} ASC")
   }
@@ -249,7 +260,7 @@ private class OptionalColumnBinder[T](binder: ColumnBinder[T]) extends ColumnBin
 
   override def set(value: Option[T], stmt: PreparedStatement, i: Int): Unit = {
     value match {
-      case Some(x) => binder.set(x, stmt, i + 1)
+      case Some(x) => binder.set(x, stmt, i)
       case None => stmt.setNull(i + 1, binder.jdbcType)
     }
   }

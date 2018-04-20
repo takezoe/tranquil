@@ -1,4 +1,4 @@
-# Tranquil [![Build Status](https://travis-ci.org/takezoe/tranquil.svg?branch=master)](https://travis-ci.org/takezoe/tranquil)
+# Tranquil [![Build Status](https://travis-ci.org/takezoe/tranquil.svg?branch=master)](https://travis-ci.org/takezoe/tranquil) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.takezoe/tranquil_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.takezoe/tranquil_2.12)
 
 Tranquil an experiment of type-safe SQL builder for Scala.
 

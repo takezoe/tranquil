@@ -3,7 +3,7 @@
 Tranquil an experiment of type-safe SQL builder for Scala.
 
 ```scala
-libraryDependencies += "com.github.takezoe" %% "tranquil" % "1.0.1"
+libraryDependencies += "com.github.takezoe" %% "tranquil" % "1.0.2"
 ```
 
 ## Usage

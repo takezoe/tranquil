@@ -43,6 +43,12 @@ package object tranquil {
     override def set(value: Double, stmt: PreparedStatement, i: Int): Unit = stmt.setDouble(i + 1, value)
     override def get(name: String, rs: ResultSet): Double = rs.getDouble(name)
   }
+  
+  implicit val floatBinder: ColumnBinder[Float] = new ColumnBinder[Float]{
+    override val jdbcType: Int = Types.FLOAT
+    override def set(value: Float, stmt: PreparedStatement, i: Int): Unit = stmt.setFloat(i + 1, value)
+    override def get(name: String, rs: ResultSet): Float = rs.getFloat(name)
+  }
 
   implicit val booleanBinder = new ColumnBinder[Boolean]{
     override val jdbcType: Int = Types.BOOLEAN

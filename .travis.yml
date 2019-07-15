@@ -1,5 +1,5 @@
 language: scala
 script:
-  - sbt test
+  - sbt +test
 jdk:
   - oraclejdk8

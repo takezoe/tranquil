@@ -5,9 +5,15 @@ import java.io.{File, FileInputStream}
 
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.scalatest.FunSuite
+import scala.util.Try
 
 class CodeGeneratorSpec extends FunSuite {
 
+  // TODO workaround for test failure in cross build
+  Try {
+    DriverManager.getConnection("jdbc:h2:mem:test-codegen;TRACE_LEVEL_FILE=4")
+  }
+  
   test("CodeGenerator"){
     val targetDir = new File("test")
     try {

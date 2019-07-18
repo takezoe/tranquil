@@ -2,15 +2,19 @@ name := "tranquil"
 
 organization := "com.github.takezoe"
 
-version := "1.0.2"
+version := "1.0.3-SNAPSHOT"
 
 scalaVersion := "2.12.8"
 
+crossScalaVersions := Seq("2.12.8", "2.13.0")
+
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "commons-io" % "commons-io" % "2.5" % "test",
   "com.h2database" % "h2" % "1.4.192" % "test"
 )
+
+fork in Test := true
 
 publishMavenStyle := true
 

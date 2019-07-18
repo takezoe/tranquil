@@ -1,7 +1,6 @@
 package com.github.takezoe.tranquil
 
 import java.sql._
-
 import org.scalatest.FunSuite
 import com.github.takezoe.tranquil.Dialect.generic
 

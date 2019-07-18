@@ -3,16 +3,10 @@ package com.github.takezoe.tranquil
 import java.sql._
 import org.scalatest.FunSuite
 import com.github.takezoe.tranquil.Dialect.generic
-import scala.util.Try
 
 import Tables._
 
 class QuerySpec extends FunSuite {
-
-  // TODO workaround for test failure in cross build
-  Try {
-    DriverManager.getConnection("jdbc:h2:mem:test-codegen;TRACE_LEVEL_FILE=4")
-  }
 
   test("leftJoin"){
     val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")

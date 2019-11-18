@@ -7,8 +7,8 @@ import scala.language.implicitConversions
 
 package object tranquil {
 
-  // Convert SingleTableAction to SingleTableQuery
-  implicit def toQuery[E <: Product, T <: TableDef[E]](t: SingleTableAction[T, E]): SingleTableQuery[T, E] = {
+  // Convert SingleTableAction to Query
+  implicit def toQuery[E <: Product, T <: TableDef[E]](t: SingleTableAction[T, E]): Query[T, T, E] = {
     t.select()
   }
 

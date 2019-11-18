@@ -213,6 +213,23 @@ class QuerySpec extends FunSuite {
     }
   }
 
+  test("update"){
+    val conn = DriverManager.getConnection("jdbc:h2:mem:test-query;TRACE_LEVEL_FILE=4")
+    try {
+      createTables(conn)
+      Users.insert(User(Default[Long], "takezoe", None)).execute(conn)
+
+      Users.filter(_.userName eq "takezoe").update(_.userName -> "Naoki Takezoe").execute(conn)
+
+      val user = Users.filter(_.userName eq "Naoki Takezoe").firstOption(conn)
+
+      assert(user.isDefined)
+    } finally {
+      conn.close()
+    }
+  }
+
+
   private def createTables(conn: Connection) = {
     executeSql(conn,
       """CREATE TABLE COMPANIES (

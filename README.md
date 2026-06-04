@@ -1,4 +1,4 @@
-# Tranquil [![Build Status](https://github.com/takezoe/tranquil/actions/workflows/scala.yml/badge.svg)](https://github.com/takezoe/tranquil/actions/workflows/scala.yml) [![Maven Central](https://img.shields.io/maven-central/v/com.github.takezoe/tranquil_2.12)](https://central.sonatype.com/artifact/com.github.takezoe/tranquil_2.12)
+# Tranquil [![Build Status](https://github.com/takezoe/tranquil/actions/workflows/scala.yml/badge.svg)](https://github.com/takezoe/tranquil/actions/workflows/scala.yml) [![tranquil Scala version support](https://index.scala-lang.org/takezoe/tranquil/tranquil/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/takezoe/tranquil/tranquil)
 
 Tranquil an experiment of type-safe SQL builder for Scala.
 

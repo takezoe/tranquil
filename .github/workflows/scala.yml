@@ -1,0 +1,22 @@
+name: Scala CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 8
+          distribution: temurin
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Run tests
+        run: sbt +test

@@ -100,7 +100,7 @@ class WrappedQuery[T, R](
   override protected[tranquil] val definitions: T = shape.wrap(alias).definitions
 }
 
-class SingleTableQuery[T <: TableDef[_], R](base: T, aliasGen: AliasGenerator) extends Query[T, T, R](base, aliasGen)
+//class SingleTableQuery[T <: TableDef[_], R](base: T, aliasGen: AliasGenerator) extends Query[T, T, R](base, aliasGen)
 
 /**
  *
@@ -130,6 +130,15 @@ class Query[B <: TableDef[_], T, R](
     definitions = base.asInstanceOf[T],
     mapper      = (base.toModel _).asInstanceOf[ResultSet => R],
     aliasGen    = aliasGen
+  )
+
+  def this(base: B, aliasGen: AliasGenerator, filters: Seq[Condition]) = this(
+    base        = base,
+    columns     = base.columns,
+    definitions = base.asInstanceOf[T],
+    mapper      = (base.toModel _).asInstanceOf[ResultSet => R],
+    aliasGen    = aliasGen,
+    filters     = filters
   )
 
   override protected[tranquil] val underlying = this
@@ -180,10 +189,10 @@ class Query[B <: TableDef[_], T, R](
     ))
   }
 
-  def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
+  def innerJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, R2)] = {
 
     val alias = aliasGen.generate()
-    val wrappedQuery = new SingleTableQuery(table.base.renew(alias), aliasGen)
+    val wrappedQuery = new Query(table.base.renew(alias), aliasGen)
 
     new Query[B, (T, T2), (R, R2)](
       base        = base,
@@ -221,10 +230,10 @@ class Query[B <: TableDef[_], T, R](
     )
   }
 
-  def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: SingleTableQuery[T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
+  def leftJoin[T2 <: TableDef[R2], R2 <: Product](table: Query[T2, T2, R2])(on: (T, T2) => Condition): Query[B, (T, T2), (R, Option[R2])] = {
 
     val alias = aliasGen.generate()
-    val wrappedQuery = new SingleTableQuery(table.base.renew(alias), aliasGen)
+    val wrappedQuery = new Query(table.base.renew(alias), aliasGen)
 
     new Query[B, (T, T2), (R, Option[R2])](
       base        = base,

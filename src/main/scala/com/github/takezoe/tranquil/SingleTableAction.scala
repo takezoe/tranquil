@@ -25,7 +25,26 @@ class SingleTableAction[B <: TableDef[R], R <: Product](base: B){
     new DeleteAction(base)
   }
 
-  def select(): SingleTableQuery[B, R] = new SingleTableQuery[B, R](base.wrap(aliasGen.generate()), aliasGen)
+  def select(): Query[B, B, R] = new Query[B, B, R](base.wrap(aliasGen.generate()), aliasGen)
+
+  def filter(condition: B => Condition): FilteredSingleTableAction[B, R] = {
+    new FilteredSingleTableAction(base.wrap(aliasGen.generate()), aliasGen, Seq(condition(base)))
+  }
+}
+
+class FilteredSingleTableAction[B <: TableDef[R], R <: Product](base: B, aliasGen: AliasGenerator, filters: Seq[Condition]) extends Query[B, B, R](base, aliasGen, filters){
+
+  def update(updateColumns: B => UpdateColumn): UpdateAction[B] = {
+    new UpdateAction(base, updateColumns(base), filters)
+  }
+
+  def delete(): DeleteAction[B] = {
+    new DeleteAction(base, filters)
+  }
+
+  override def filter(condition: B => Condition): FilteredSingleTableAction[B, R] = {
+    new FilteredSingleTableAction(base, aliasGen, filters :+ condition(base))
+  }
 
 }
 
@@ -69,10 +88,6 @@ class InsertAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn){
 
 class UpdateAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn, filters: Seq[Condition] = Nil){
 
-  def filter(filter: T => Condition): UpdateAction[T] = {
-    new UpdateAction[T](tableDef, updateColumn, filters :+ filter(tableDef))
-  }
-
   def updateStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
     sb.append("UPDATE ")
@@ -101,10 +116,6 @@ class UpdateAction[T <: TableDef[_]](tableDef: T, updateColumn: UpdateColumn, fi
 }
 
 class DeleteAction[T <: TableDef[_]](tableDef: T, filters: Seq[Condition] = Nil){
-
-  def filter(filter: T => Condition): DeleteAction[T] = {
-    new DeleteAction[T](tableDef, filters :+ filter(tableDef))
-  }
 
   def deleteStatement(bindParams: BindParams = new BindParams()): (String, BindParams) = {
     val sb = new StringBuilder()
